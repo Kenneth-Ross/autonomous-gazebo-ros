@@ -1,0 +1,179 @@
+<?xml version="1.0"?> 
+<robot name="simplecar">
+    <!-- Colors --> 
+    <material name="black"> 
+        <color rgba="0 0 0 1"/>
+    </material>
+    <material name="blue"> 
+        <color rgba="0.6 0.7 0.8 1"/>
+    </material>
+
+
+    <!-- Base Frame of Car --> 
+    <link name="base_link">
+        <visual> 
+            <geometry> 
+                <box size="1.5 0.9 0.3"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+        <inertial> 
+            <mass value="162"/>
+            <inertia ixx="48.6" ixy="0" ixz="0" iyy="48.6" iyz="0.0" izz="48.6"/>
+        </inertial> 
+    </link> 
+
+
+    <!-- Left Front Wheel -->
+    <link name="left_front_wheel">
+        <visual> 
+            <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="1.57075 1.57075 0"/>
+            <material name="black"/>
+        </visual>
+        <collision> 
+             <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="1.57075 1.57075 0"/>
+        </collision> 
+        <inertial> 
+            <origin rpy="1.57075 1.57075 0"/>
+            <mass value="8.1"/>
+            <inertia ixx="97.2" ixy="0" ixz="0" iyy="97.2" iyz="0.0" izz="48.6"/>
+        </inertial> 
+    </link> 
+    <joint name="left_hinge_to_left_front_wheel" type="continuous">
+        <parent link="left_hinge"/>
+        <child link="left_front_wheel"/> 
+        <axis xyz="0 1 0"/>
+        <origin xyz="0 0.6 0"/>
+    </joint>
+    <!-- Left Front Wheel - Hinge -->
+    <link name="left_hinge">
+        <visual> 
+            <geometry> 
+                <box size="0.60 0.06 0.06"/>
+            </geometry>
+            <origin xyz="0 0.3 0 " rpy="0 0 1.57075"/>
+            <material name="black"/>
+        </visual>
+        <inertial> 
+            <origin rpy="0 0 1.57075"/>
+            <mass value="0.27"/>
+            <inertia ixx="0.001215" ixy="0" ixz="0" iyy="0.001215" iyz="0" izz="0.001215"/>
+        </inertial> 
+    </link> 
+    <joint name="base_to_left_hinge" type="revolute">
+        <parent link="base_link"/>
+        <child link="left_hinge"/> 
+        <axis xyz="0 0 1"/>
+        <origin xyz="0.6 0.0 0"/>
+        <limit effort="100" lower="-1.5" upper="1.5" velocity="100"/>
+    </joint>
+    <!-- Right Front Wheel -->
+    <link name="right_front_wheel">
+        <visual> 
+            <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="-1.57075 -1.57075 0"/>
+            <material name="black"/>
+        </visual>
+        <collision> 
+             <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="-1.57075 -1.57075 0"/>
+        </collision> 
+        <inertial> 
+            <origin rpy="-1.57075 -1.57075 0"/>
+            <mass value="8.1"/>
+            <inertia ixx="97.2" ixy="0" ixz="0" iyy="97.2" iyz="0.0" izz="48.6"/>
+        </inertial> 
+    </link> 
+    <joint name="right_hinge_to_right_front_wheel" type="continuous">
+        <parent link="right_hinge"/>
+        <child link="right_front_wheel"/> 
+        <axis xyz="0 1 0"/>
+        <origin xyz="0 -0.6 0"/>
+    </joint>
+    <!-- Right Front Wheel - Hinge -->
+    <link name="right_hinge">
+        <visual> 
+            <geometry> 
+                <box size="0.60 0.06 0.06"/>
+            </geometry>
+            <origin xyz="0 -0.3 0 " rpy="0 0 -1.57075"/>
+            <material name="black"/>
+        </visual>
+        <inertial> 
+            <origin rpy="0 0 -1.57075"/>
+            <mass value="0.27"/>
+            <inertia ixx="0.001215" ixy="0" ixz="0" iyy="0.001215" iyz="0" izz="0.001215"/>
+        </inertial> 
+    </link> 
+    <joint name="base_to_right_hinge" type="revolute">
+        <parent link="base_link"/>
+        <child link="right_hinge"/> 
+        <axis xyz="0 0 1"/>
+        <origin xyz="0.6 0 0"/>
+        <limit effort="100" lower="-1.5" upper="1.5" velocity="100"/>
+    </joint>
+    <!-- Left Back Wheel -->
+    <link name="left_back_wheel">
+        <visual> 
+            <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="1.57075 1.57075 0"/>
+            <material name="black"/>
+        </visual>
+        <collision> 
+             <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="1.57075 1.57075 0"/>
+        </collision> 
+        <inertial> 
+            <origin rpy="1.57075 1.57075 0"/>
+            <mass value="8.1"/>
+            <inertia ixx="97.2" ixy="0" ixz="0" iyy="97.2" iyz="0.0" izz="48.6"/>
+        </inertial> 
+    </link> 
+    <joint name="base_to_left_back_wheel" type="continuous">
+        <parent link="base_link"/>
+        <child link="left_back_wheel"/> 
+        <axis xyz="0 1 0"/>
+        <origin xyz="-0.6 0.525 0"/>
+    </joint>
+    <!-- Right Back Wheel -->
+    <link name="right_back_wheel">
+        <visual> 
+            <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="-1.57075 -1.57075 0"/>
+            <material name="black"/>
+        </visual>
+        <collision> 
+             <geometry> 
+                <cylinder length="0.15" radius="0.3"/>
+            </geometry>
+            <origin rpy="-1.57075 -1.57075 0"/>
+        </collision> 
+        <inertial> 
+            <origin rpy="-1.57075 -1.57075 0"/>
+            <mass value="8.1"/>
+            <inertia ixx="97.2" ixy="0" ixz="0" iyy="97.2" iyz="0.0" izz="48.6"/>
+        </inertial> 
+    </link> 
+    <joint name="base_to_right_back_wheel" type="continuous">
+        <parent link="base_link"/>
+        <child link="right_back_wheel"/> 
+        <axis xyz="0 1 0"/>
+        <origin xyz="-0.6 -0.525 0"/>
+    </joint>
+</robot>
