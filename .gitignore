@@ -1,0 +1,24 @@
+# ROS2 build artifacts
+**/build/
+**/install/
+**/log/
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Data
+video1/
+*.mcap
+
+# IDEs
+.vscode/
+.idea/
+
+# System
+.DS_Store

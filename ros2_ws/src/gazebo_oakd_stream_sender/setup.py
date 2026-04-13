@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'autonomus_kart'
+package_name = 'gazebo_oakd_stream_sender'
 
 setup(
     name=package_name,
@@ -11,12 +11,12 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'opencv-python', 'cv_bridge', 'PyGObject', 'numpy'],
     zip_safe=True,
     maintainer='k-dev',
-    maintainer_email='k-dev@todo.todo',
+    maintainer_email='kennethsross20@gmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',
@@ -24,6 +24,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'rgb_image_subscriber = gazebo_oakd_stream_sender.rgb_image_subscriber:main',
+            'left_image_subscriber = gazebo_oakd_stream_sender.left_image_subscriber:main',
+            'right_image_subscriber = gazebo_oakd_stream_sender.right_image_subscriber:main',
         ],
     },
 )
