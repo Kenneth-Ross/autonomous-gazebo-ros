@@ -14,6 +14,7 @@ class DrivingModelNode(Node):
         self.declare_parameter('max_accel', 20.0)
         self.declare_parameter('max_decel', 20.0)
         self.declare_parameter('drag', 0.1)
+        self.declare_parameter('auto_drive', True)
 
         # --- Parameters (Vehicle Geometry for logic) ---
         self.declare_parameter('max_steering_angle', 0.6108)
@@ -24,10 +25,11 @@ class DrivingModelNode(Node):
         self.max_decel = self.get_parameter('max_decel').value
         self.drag = self.get_parameter('drag').value
         self.max_steer_limit = self.get_parameter('max_steering_angle').value
+        self.auto_drive = self.get_parameter('auto_drive').value
 
         # --- State ---
         self.velocity_setpoint = 0.0
-        self.throttle = 0.0
+        self.throttle = 1.0 if self.auto_drive else 0.0
         self.brake = 0.0
         self.steering_input = 0.0 # -1.0 to 1.0
         self.last_time = self.get_clock().now()
@@ -71,9 +73,9 @@ class DrivingModelNode(Node):
 
         # --- Control Output ---
         tw = Twist()
-        # Gazebo AckermannSteering Plugin expects linear.x as velocity
+        # Ackermann Plugin expects linear.x as speed (m/s)
         tw.linear.x = float(self.velocity_setpoint)
-        # Gazebo AckermannSteering Plugin expects angular.z as steering angle in radians
+        # Ackermann Plugin expects angular.z as steering angle (radians)
         tw.angular.z = float(self.steering_input * self.max_steer_limit)
         
         self.cmd_vel_pub.publish(tw)

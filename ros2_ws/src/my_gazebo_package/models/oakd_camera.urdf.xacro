@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="oakd_camera" params="parent_link">
+  <xacro:macro name="oakd_camera" params="parent_link x:=1.0 y:=0 z:=0.25">
     <joint name="camera_base_joint" type="fixed">
       <parent link="${parent_link}"/>
       <child link="camera_base_link"/>
-      <origin xyz="1.0 0 0.25" rpy="0 0 0"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
     </joint>
 
     <link name="camera_base_link">

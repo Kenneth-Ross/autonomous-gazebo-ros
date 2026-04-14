@@ -96,6 +96,24 @@ def generate_launch_description():
             output='screen'
         ),
 
+        # Bridge for odom
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='odom_bridge',
+            arguments=['/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry'],
+            output='screen'
+        ),
+
+        # Bridge for joint_states
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='joint_states_bridge',
+            arguments=['/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model'],
+            output='screen'
+        ),
+
         # Bridge for cmd_vel
         Node(
             package='ros_gz_bridge',
@@ -127,6 +145,13 @@ def generate_launch_description():
                     name='track_generator',
                     output='screen',
                     parameters=[{'initial_track': initial_track}]
+                ),
+                Node(
+                    package='my_gazebo_package',
+                    executable='driving_model_node',
+                    name='driving_model',
+                    output='screen',
+                    parameters=[{'auto_drive': False}]
                 )
             ]
         )

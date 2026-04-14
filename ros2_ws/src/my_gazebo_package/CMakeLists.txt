@@ -26,8 +26,8 @@ ament_python_install_package(my_gazebo_package_py)
 # Install Python nodes
 install(PROGRAMS
   my_gazebo_package_py/nodes/track_generator_node.py
+  my_gazebo_package_py/nodes/driving_model_node.py
   DESTINATION lib/${PROJECT_NAME}
-  RENAME track_generator_node
 )
 
 # Install data files
