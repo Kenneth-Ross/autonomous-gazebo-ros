@@ -15,8 +15,8 @@ class RGBImageSubscriber(Node):
         self.host = self.get_parameter('host').get_parameter_value().string_value
 
         # Hardcoded properties from the OAK-D URDF
-        self.image_width = 1920
-        self.image_height = 1080
+        self.image_width = 640
+        self.image_height = 480
         self.image_framerate = 30
         # Format from cv_bridge conversion
         self.image_format = 'BGR'
@@ -54,7 +54,7 @@ class RGBImageSubscriber(Node):
         pipeline_str = (
             "appsrc name=appsrc ! "
             "videoconvert ! "
-f"video/x-raw,format=I420 ! "
+            "video/x-raw,format=I420 ! "
             "x264enc tune=zerolatency speed-preset=ultrafast ! "
             "rtph264pay ! "
             f"udpsink host={self.host} port=5000"

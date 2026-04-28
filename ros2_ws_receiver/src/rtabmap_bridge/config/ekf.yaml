@@ -1,0 +1,50 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 30.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    transform_time_offset: 0.0
+    transform_timeout: 0.2 # Adjusted for RK3588 as per Critic
+    print_diagnostics: true
+    debug: false
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    # Odom from Gazebo (Wheel Encoders)
+    odom0: odom
+    odom0_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+
+    # IMU from Gazebo
+    imu0: imu
+    imu0_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, true,
+                  true,  false, false]
+    imu0_differential: false
+    imu0_relative: true
+    imu0_remove_gravitational_acceleration: true
+
+    # Visual Odometry from RTAB-Map
+    odom1: rtabmap/odom
+    odom1_config: [true,  true,  false,
+                   false, false, true,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom1_differential: true # Differential for VO is usually safer
+    odom1_relative: false
+
+    use_control: true
+    control_config: [true, false, false, false, false, true] # x, yaw
+    acceleration_limits: [5.0, 0.0, 0.0, 0.0, 0.0, 2.0]
+    deceleration_limits: [10.0, 0.0, 0.0, 0.0, 0.0, 4.0]

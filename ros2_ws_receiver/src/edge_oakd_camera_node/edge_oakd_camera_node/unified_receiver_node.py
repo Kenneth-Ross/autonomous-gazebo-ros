@@ -48,7 +48,7 @@ class UnifiedReceiverNode(Node):
         # with 'mppvideodec' for hardware accelerated decoding.
         pipeline_str = (
             f"udpsrc port={port} "
-            f"caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! "
+            f'caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! '
             "rtph264depay ! "
             "h264parse ! "
             "avdec_h264 ! "

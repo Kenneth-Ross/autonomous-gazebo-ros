@@ -11,6 +11,9 @@ class RightImageSubscriber(Node):
     def __init__(self):
         super().__init__('right_image_subscriber')
 
+        self.declare_parameter('host', '127.0.0.1')
+        self.host = self.get_parameter('host').get_parameter_value().string_value
+
         # Hardcoded properties from the OAK-D URDF
         self.image_width = 1280
         self.image_height = 800
@@ -56,7 +59,7 @@ class RightImageSubscriber(Node):
             "video/x-raw,format=I420 ! " # Common intermediate format for x264enc
             "x264enc tune=zerolatency speed-preset=ultrafast ! "
             "rtph264pay ! "
-            f"udpsink host=127.0.0.1 port={self.udp_port}"
+            f"udpsink host={self.host} port={self.udp_port}"
         )
         self.get_logger().info(f'GStreamer Pipeline: {pipeline_str}')
         return Gst.parse_launch(pipeline_str)

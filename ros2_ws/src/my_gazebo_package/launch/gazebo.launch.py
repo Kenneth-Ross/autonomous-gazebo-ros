@@ -86,12 +86,12 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='camera_bridge',
             arguments=[
-                '/oakd/rgb/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
-                '/oakd/rgb/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
-                '/oakd/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
-                '/oakd/left/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
-                '/oakd/right/image_raw@sensor_msgs/msg/Image[gz.msgs.Image',
-                '/oakd/right/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
+                '/oakd/rgb/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@oakd/rgbd_camera/image',
+                '/oakd/rgb/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@oakd/rgbd_camera/camera_info',
+                '/oakd/depth/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@oakd/rgbd_camera/depth_image',
+                '/oakd/depth/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@oakd/rgbd_camera/camera_info',
+                '/oakd/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@/oakd/left/image_raw',
+                '/oakd/right/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@/oakd/right/image_raw',
             ],
             output='screen'
         ),

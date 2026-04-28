@@ -10,15 +10,15 @@ class DrivingModelNode(Node):
         super().__init__('driving_model')
 
         # --- Parameters (Physics / Limits) ---
-        self.declare_parameter('max_speed', 15.0)
-        self.declare_parameter('max_accel', 20.0)
-        self.declare_parameter('max_decel', 20.0)
+        self.declare_parameter('max_speed', 13.41) # 30 mph (~48.3 km/h)
+        self.declare_parameter('max_accel', 30.0)  # Quick acceleration
+        self.declare_parameter('max_decel', 25.0)
         self.declare_parameter('drag', 0.1)
         self.declare_parameter('auto_drive', True)
 
         # --- Parameters (Vehicle Geometry for logic) ---
         self.declare_parameter('max_steering_angle', 0.6108)
-        self.declare_parameter('max_velocity', 1.0) # Model physical limit
+        self.declare_parameter('max_velocity', 13.41) # 30 mph cap
 
         self.max_speed = min(self.get_parameter('max_speed').value, self.get_parameter('max_velocity').value)
         self.max_accel = self.get_parameter('max_accel').value

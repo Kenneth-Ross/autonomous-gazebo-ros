@@ -22,3 +22,7 @@ video1/
 
 # System
 .DS_Store
+.gemini/
+.hybrid_sysroot/
+*.tar
+*.log

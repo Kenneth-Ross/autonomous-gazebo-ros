@@ -1,0 +1,8 @@
+setuptools
+opencv-python
+cv_bridge
+PyGObject
+numpy
+
+[test]
+pytest

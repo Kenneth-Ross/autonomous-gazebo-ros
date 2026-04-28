@@ -39,6 +39,14 @@
       </inertial>
     </link>
 
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link_rgb"/>
+      <child link="camera_link_optical"/>
+      <origin xyz="0 0 0" rpy="-1.570796 0 -1.570796"/>
+    </joint>
+
+    <link name="camera_link_optical"/>
+
     <joint name="camera_left_joint" type="fixed">
       <parent link="camera_base_link"/>
       <child link="camera_link_left"/>
@@ -79,22 +87,22 @@
 
     <!-- Gazebo sensor definitions -->
     <gazebo reference="camera_link_rgb">
-      <sensor type="camera" name="rgb_camera">
+      <sensor type="rgbd_camera" name="oakd_rgbd_camera">
         <update_rate>30.0</update_rate>
         <camera name="head">
           <horizontal_fov>1.396</horizontal_fov>
           <image>
-            <width>1920</width>
-            <height>1080</height>
+            <width>640</width>
+            <height>480</height>
             <format>R8G8B8</format>
           </image>
           <clip>
             <near>0.02</near>
-            <far>300</far>
+            <far>30</far>
           </clip>
         </camera>
-        <topic>/oakd/rgb/image_raw</topic>
-        <camera_info_topic>/oakd/rgb/camera_info</camera_info_topic>
+        <topic>/oakd/rgbd_camera</topic>
+        <gz_frame_id>camera_link_rgb</gz_frame_id>
       </sensor>
     </gazebo>
 

@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', ['launch/stream_to_remote.launch.py']),
     ],
     install_requires=['setuptools', 'opencv-python', 'cv_bridge', 'PyGObject', 'numpy'],
     zip_safe=True,
@@ -25,6 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'rgb_image_subscriber = gazebo_oakd_stream_sender.rgb_image_subscriber:main',
+            'depth_image_subscriber = gazebo_oakd_stream_sender.depth_image_subscriber:main',
             'left_image_subscriber = gazebo_oakd_stream_sender.left_image_subscriber:main',
             'right_image_subscriber = gazebo_oakd_stream_sender.right_image_subscriber:main',
         ],

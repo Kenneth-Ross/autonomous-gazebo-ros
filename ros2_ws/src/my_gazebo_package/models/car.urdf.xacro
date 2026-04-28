@@ -38,10 +38,35 @@
         </collision>
         <inertial>
             <origin xyz="-0.151427 0 0.175" rpy="0 0 0"/>
-            <mass value="1.14395"/>
-            <inertia ixx="0.126164" ixy="0" ixz="0" iyy="0.416519" iyz="0" izz="0.481014"/>
+            <mass value="50.0"/>
+            <inertia ixx="5.0" ixy="0" ixz="0" iyy="17.0" iyz="0" izz="20.0"/>
         </inertial>
     </link>
+
+    <!-- IMU Link and Sensor -->
+    <link name="imu_link">
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        </inertial>
+    </link>
+
+    <joint name="imu_joint" type="fixed">
+        <parent link="chassis"/>
+        <child link="imu_link"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="imu_link">
+        <sensor name="imu_sensor" type="imu">
+            <always_on>1</always_on>
+            <update_rate>100</update_rate>
+            <visualize>true</visualize>
+            <topic>imu</topic>
+            <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu">
+            </plugin>
+        </sensor>
+    </gazebo>
 
     <!-- Steering Links -->
     <link name="front_left_wheel_steering_link">
@@ -52,7 +77,7 @@
             <material name="white"/>
         </visual>
         <inertial>
-            <mass value="0.5"/>
+            <mass value="5.0"/>
             <inertia ixx="0.0153" ixy="0" ixz="0" iyy="0.025" iyz="0" izz="0.0153"/>
         </inertial>
     </link>
@@ -62,7 +87,7 @@
         <child link="front_left_wheel_steering_link"/>
         <origin xyz="0.554283 0.5 0.02" rpy="0 0 0"/>
         <axis xyz="0 0 1"/>
-        <limit lower="-0.6" upper="0.6" velocity="1.0" effort="25"/>
+        <limit lower="-0.6" upper="0.6" velocity="10.0" effort="1000"/>
     </joint>
 
     <link name="front_right_wheel_steering_link">
@@ -73,7 +98,7 @@
             <material name="white"/>
         </visual>
         <inertial>
-            <mass value="0.5"/>
+            <mass value="5.0"/>
             <inertia ixx="0.0153" ixy="0" ixz="0" iyy="0.025" iyz="0" izz="0.0153"/>
         </inertial>
     </link>
@@ -83,7 +108,7 @@
         <child link="front_right_wheel_steering_link"/>
         <origin xyz="0.554283 -0.5 0.02" rpy="0 0 0"/>
         <axis xyz="0 0 1"/>
-        <limit lower="-0.6" upper="0.6" velocity="1.0" effort="25"/>
+        <limit lower="-0.6" upper="0.6" velocity="10.0" effort="1000"/>
     </joint>
 
     <!-- Wheels Macro -->
@@ -104,8 +129,8 @@
             </collision>
             <inertial>
                 <origin xyz="0 0 0" rpy="1.570796 0 0"/>
-                <mass value="2"/>
-                <inertia ixx="0.145833" ixy="0" ixz="0" iyy="0.145833" iyz="0" izz="0.125"/>
+                <mass value="15.0"/>
+                <inertia ixx="0.5" ixy="0" ixz="0" iyy="0.5" iyz="0" izz="0.7"/>
             </inertial>
         </link>
         <joint name="${name}_joint" type="continuous">
@@ -113,6 +138,7 @@
             <child link="${name}"/>
             <xacro:insert_block name="origin"/>
             <axis xyz="0 1 0"/>
+            <limit effort="5000" velocity="100"/>
         </joint>
     </xacro:macro>
 
@@ -149,10 +175,10 @@
             <wheel_radius>0.3</wheel_radius>
             <topic>cmd_vel</topic>
             <odom_topic>odom</odom_topic>
-            <min_velocity>-1</min_velocity>
-            <max_velocity>1</max_velocity>
-            <min_acceleration>-3</min_acceleration>
-            <max_acceleration>3</max_acceleration>
+            <min_velocity>-13.41</min_velocity>
+            <max_velocity>13.41</max_velocity>
+            <min_acceleration>-30</min_acceleration>
+            <max_acceleration>30</max_acceleration>
         </plugin>
 
         <plugin
