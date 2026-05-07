@@ -15,8 +15,8 @@ class RGBImageSubscriber(Node):
         self.host = self.get_parameter('host').get_parameter_value().string_value
 
         # Hardcoded properties from the OAK-D URDF
-        self.image_width = 640
-        self.image_height = 480
+        self.image_width = 1280
+        self.image_height = 800
         self.image_framerate = 30
         # Format from cv_bridge conversion
         self.image_format = 'BGR'

@@ -12,9 +12,14 @@ env/
 venv/
 ENV/
 
-# Data
+# Data and Models
 video1/
 *.mcap
+*.rknn
+*.onnx
+*.tar
+*.zip
+*.gz
 
 # IDEs
 .vscode/
@@ -24,5 +29,9 @@ video1/
 .DS_Store
 .gemini/
 .hybrid_sysroot/
-*.tar
 *.log
+
+# Submodules / Nested repos
+# If you want to track ORB_SLAM3 as source, comment the next line.
+# If you want it as a submodule, it will be handled by .gitmodules.
+# external/ORB_SLAM3/.git

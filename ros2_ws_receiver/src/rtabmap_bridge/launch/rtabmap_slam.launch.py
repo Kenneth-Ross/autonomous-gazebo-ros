@@ -44,11 +44,13 @@ def generate_launch_description():
             'odom_frame_id': 'odom',
             'publish_tf': True,
             'approx_sync': True,
-            'queue_size': 10,
-            'Vis/MaxFeatures': '500',
+            'queue_size': 30,
+            'Vis/MaxFeatures': '600',
             'Mem/IncrementalMemory': 'true',
             'RGBD/LinearUpdate': '0.1',
-            'DbSqlite3/InMemory': 'true' # Optimized for 16GB RAM
+            'RGBD/AngularUpdate': '0.1',
+            'DbSqlite3/InMemory': 'true',
+            'Rtabmap/DetectionRate': '1.0'
         }],
         remappings=[
             ('rgb/image', '/camera/rgb/image_raw'),

@@ -29,6 +29,7 @@ setup(
             'depth_image_subscriber = gazebo_oakd_stream_sender.depth_image_subscriber:main',
             'left_image_subscriber = gazebo_oakd_stream_sender.left_image_subscriber:main',
             'right_image_subscriber = gazebo_oakd_stream_sender.right_image_subscriber:main',
+            'combined_streamer = gazebo_oakd_stream_sender.combined_streamer:main',
         ],
     },
 )

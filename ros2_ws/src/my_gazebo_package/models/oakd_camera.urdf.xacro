@@ -50,7 +50,7 @@
     <joint name="camera_left_joint" type="fixed">
       <parent link="camera_base_link"/>
       <child link="camera_link_left"/>
-      <origin xyz="0 0.0375 0" rpy="0 0 0"/>
+      <origin xyz="0 0.075 0" rpy="0 0 0"/>
     </joint>
 
     <link name="camera_link_left">
@@ -69,7 +69,7 @@
     <joint name="camera_right_joint" type="fixed">
       <parent link="camera_base_link"/>
       <child link="camera_link_right"/>
-      <origin xyz="0 -0.0375 0" rpy="0 0 0"/>
+      <origin xyz="0 -0.075 0" rpy="0 0 0"/>
     </joint>
 
     <link name="camera_link_right">
@@ -92,17 +92,22 @@
         <camera name="head">
           <horizontal_fov>1.396</horizontal_fov>
           <image>
-            <width>640</width>
-            <height>480</height>
+            <width>1280</width>
+            <height>800</height>
             <format>R8G8B8</format>
           </image>
           <clip>
-            <near>0.02</near>
-            <far>30</far>
+            <near>0.7</near>
+            <far>30.0</far>
           </clip>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.007</stddev>
+          </noise>
         </camera>
         <topic>/oakd/rgbd_camera</topic>
-        <gz_frame_id>camera_link_rgb</gz_frame_id>
+        <gz_frame_id>camera_link_optical</gz_frame_id>
       </sensor>
     </gazebo>
 
@@ -110,7 +115,7 @@
       <sensor type="camera" name="left_camera">
         <update_rate>30.0</update_rate>
         <camera name="left">
-          <horizontal_fov>1.22</horizontal_fov>
+          <horizontal_fov>1.396</horizontal_fov>
           <image>
             <width>1280</width>
             <height>800</height>
@@ -130,7 +135,7 @@
       <sensor type="camera" name="right_camera">
         <update_rate>30.0</update_rate>
         <camera name="right">
-          <horizontal_fov>1.22</horizontal_fov>
+          <horizontal_fov>1.396</horizontal_fov>
           <image>
             <width>1280</width>
             <height>800</height>

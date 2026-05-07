@@ -15,7 +15,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 # Install ROS 2 Foxy and all dependencies
 echo "--- Installing ROS 2 Foxy, GStreamer, and Python dependencies via APT... ---"
 sudo apt-get update
-sudo apt-get install -y ros-foxy-desktop ros-dev-tools python3-opencv python3-numpy python3-gi gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav
+sudo apt-get install -y ros-foxy-desktop ros-foxy-rtabmap-ros ros-foxy-robot-localization ros-foxy-depthimage-to-laserscan ros-dev-tools python3-opencv python3-numpy python3-gi gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav
 
 # Clone vision_opencv for Foxy
 echo "--- Cloning vision_opencv repository (for cv_bridge on Foxy) ---"

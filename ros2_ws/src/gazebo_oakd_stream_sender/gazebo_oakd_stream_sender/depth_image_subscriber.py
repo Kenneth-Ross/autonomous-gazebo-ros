@@ -14,8 +14,8 @@ class DepthImageSubscriber(Node):
         self.declare_parameter('host', '127.0.0.1')
         self.host = self.get_parameter('host').get_parameter_value().string_value
 
-        self.image_width = 640
-        self.image_height = 480
+        self.image_width = 1280
+        self.image_height = 800
         self.image_framerate = 30
         self.image_format_gst = 'GRAY16_LE' 
 

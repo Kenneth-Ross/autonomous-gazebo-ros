@@ -2,23 +2,27 @@
 set -e
 
 # --- CONFIGURATION ---
-# Replace with your Orange Pi's Tailscale IP and username
-TARGET_IP="100.88.199.104"
+# Use the Ethernet (eth0) IP of your Orange Pi (Direct Hardware Connection)
+# Example: 10.42.0.1 or 192.168.1.x
+TARGET_IP="${TARGET_IP:-10.42.0.1}"
 TARGET_USER="kennethsross20"
 TARGET_DIR="~/ros2_ws_receiver"
 
-# Source directory (built on host)
-INSTALL_DIR="$(pwd)/ros2_ws_receiver/install"
+# Source directory (src folder for native build)
+SOURCE_DIR="$(pwd)/ros2_ws_receiver/src"
+SCRIPTS_DIR="$(pwd)/scripts"
 MODEL_FILE="$(pwd)/yolo11n_416_qat_int8_fp16out.rknn"
 
-echo "--- Deploying to Orange Pi ($TARGET_IP) ---"
+echo "--- Deploying SOURCE and SCRIPTS to Orange Pi ($TARGET_IP) ---"
 
 # Create target directory
-ssh $TARGET_USER@$TARGET_IP "mkdir -p $TARGET_DIR"
+ssh $TARGET_USER@$TARGET_IP "mkdir -p $TARGET_DIR/src"
 
-# Sync the install folder
-# Note: --delete will remove files on target that don't exist on host
-rsync -avz --progress $INSTALL_DIR $TARGET_USER@$TARGET_IP:$TARGET_DIR/
+# Sync the src folder
+rsync -avz --progress $SOURCE_DIR $TARGET_USER@$TARGET_IP:$TARGET_DIR/
+
+# Sync the setup scripts
+rsync -avz --progress $SCRIPTS_DIR/setup_orangepi_foxy.sh $TARGET_USER@$TARGET_IP:$TARGET_DIR/
 
 # Sync the model file
 rsync -avz --progress $MODEL_FILE $TARGET_USER@$TARGET_IP:$TARGET_DIR/
