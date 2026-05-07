@@ -16,15 +16,8 @@ def generate_launch_description():
         host_arg,
         Node(
             package='gazebo_oakd_stream_sender',
-            executable='rgb_image_subscriber',
-            name='rgb_streamer',
-            parameters=[{'host': host}],
-            output='screen'
-        ),
-        Node(
-            package='gazebo_oakd_stream_sender',
-            executable='depth_image_subscriber',
-            name='depth_streamer',
+            executable='combined_streamer',
+            name='oakd_combined_streamer',
             parameters=[{'host': host}],
             output='screen'
         ),

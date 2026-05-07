@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+import numpy as np
 import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GLib
@@ -14,7 +15,7 @@ class UnifiedReceiverNode(Node):
 
         # Stream configurations
         self.stream_configs = {
-            'rgb': {'port': 5000, 'topic': '/edge_oakd/rgb/image_raw', 'format': 'BGR'},
+            'rgb': {'port': 5000, 'topic': '/edge_oakd/rgb/image_raw', 'format': 'bgr8'},
             'left': {'port': 5001, 'topic': '/edge_oakd/left/image_raw', 'format': 'mono8'},
             'right': {'port': 5002, 'topic': '/edge_oakd/right/image_raw', 'format': 'mono8'}
         }
@@ -44,16 +45,18 @@ class UnifiedReceiverNode(Node):
         self.get_logger().info('Unified Receiver Node has been started.')
 
     def create_gstreamer_pipeline(self, name, port):
-        # For the Orange Pi 5 Pro, you can try replacing 'avdec_h264' 
-        # with 'mppvideodec' for hardware accelerated decoding.
+        # Optimization for Orange Pi 5: Use 'mppvideodec' for HW decoding 
+        # and 'rgavideoconvert' for HW color conversion.
+        gst_format = "BGR" if self.stream_configs[name]['format'] == 'bgr8' else "GRAY8"
+        
         pipeline_str = (
             f"udpsrc port={port} "
             f'caps="application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! '
             "rtph264depay ! "
             "h264parse ! "
-            "avdec_h264 ! "
-            "videoconvert ! "
-            "video/x-raw ! "
+            "mppvideodec ! "
+            "rgavideoconvert ! "
+            f"video/x-raw,format={gst_format} ! "
             "appsink name=appsink emit-signals=true"
         )
         self.get_logger().info(f"GStreamer Pipeline for {name}: {pipeline_str}")
@@ -75,11 +78,12 @@ class UnifiedReceiverNode(Node):
             
             # Get data from Gst.Buffer as numpy array
             frame_data = buf.extract_dup(0, buf.get_size())
-            frame = np.ndarray((height, width), buffer=frame_data, dtype=np.uint8)
-
-            # For RGB stream, reshape to 3 channels
+            
+            # Reshape based on stream type
             if stream_name == 'rgb':
                 frame = np.ndarray((height, width, 3), buffer=frame_data, dtype=np.uint8)
+            else:
+                frame = np.ndarray((height, width), buffer=frame_data, dtype=np.uint8)
 
             # Convert to ROS message and publish
             config = self.stream_configs[stream_name]

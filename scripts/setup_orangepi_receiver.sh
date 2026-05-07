@@ -15,20 +15,21 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-a
 # Install ROS 2 Jazzy and all dependencies on a single line
 echo "--- Installing ROS 2 Jazzy, GStreamer, and Python dependencies via APT... ---"
 sudo apt-get update
-sudo apt-get install -y ros-jazzy-desktop ros-dev-tools python3-opencv python3-numpy python3-gi gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav
-
-# Clone vision_opencv if needed
-echo "--- Cloning vision_opencv repository (for cv_bridge) ---"
-mkdir -p ~/ros2_ws_receiver/src
-cd ~/ros2_ws_receiver/src
-if [ ! -d "vision_opencv" ]; then
-    git clone https://github.com/ros-perception/vision_opencv.git -b jazzy
-else
-    echo "vision_opencv directory already exists, skipping clone."
-fi
+sudo apt-get install -y \
+    ros-jazzy-desktop \
+    ros-dev-tools \
+    ros-jazzy-cv-bridge \
+    python3-opencv \
+    python3-numpy \
+    python3-gi \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav
 
 # Build the workspace
 echo "--- Building the ROS2 workspace 'ros2_ws_receiver'... ---"
+mkdir -p ~/ros2_ws_receiver/src
 cd ~/ros2_ws_receiver
 source /opt/ros/jazzy/setup.bash
 colcon build
