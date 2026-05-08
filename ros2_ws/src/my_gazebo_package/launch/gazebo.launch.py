@@ -80,18 +80,30 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Bridge for camera topics
+        # Bridge for camera info
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            name='camera_bridge',
+            name='camera_info_bridge',
             arguments=[
-                '/oakd/rgb/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@oakd/rgbd_camera/image',
-                '/oakd/rgb/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@oakd/rgbd_camera/camera_info',
-                '/oakd/depth/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@oakd/rgbd_camera/depth_image',
-                '/oakd/depth/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@oakd/rgbd_camera/camera_info',
-                '/oakd/left/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@/oakd/left/image_raw',
-                '/oakd/right/image_raw@sensor_msgs/msg/Image[gz.msgs.Image@/oakd/right/image_raw',
+                '/oakd/rgb/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@/oakd/rgbd_camera/camera_info',
+                '/oakd/depth/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@/oakd/rgbd_camera/camera_info',
+            ],
+            output='screen'
+        ),
+
+        # Bridge for camera images (Must use image_bridge for sensor_msgs/Image)
+        Node(
+            package='ros_gz_image',
+            executable='image_bridge',
+            name='camera_image_bridge',
+            arguments=[
+                '/oakd/rgbd_camera/image',
+                '/oakd/rgbd_camera/depth_image'
+            ],
+            remappings=[
+                ('/oakd/rgbd_camera/image', '/oakd/rgb/image_raw'),
+                ('/oakd/rgbd_camera/depth_image', '/oakd/depth/image_raw')
             ],
             output='screen'
         ),
