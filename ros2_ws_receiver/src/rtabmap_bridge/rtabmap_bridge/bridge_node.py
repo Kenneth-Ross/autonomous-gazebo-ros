@@ -28,7 +28,18 @@ class RTABMapBridgeNode(Node):
         self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', 10)
         self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', 10)
         
-        # Subscribers for CameraInfo (from Gazebo)
+        # Static Camera Info (Standard OAK-D 1280x800 calibration)
+        self.static_info = CameraInfo()
+        self.static_info.header.frame_id = "camera_link_optical"
+        self.static_info.width = 1280
+        self.static_info.height = 800
+        self.static_info.k = [800.0, 0.0, 640.0, 0.0, 800.0, 400.0, 0.0, 0.0, 1.0] # Fx, 0, Cx, 0, Fy, Cy, 0, 0, 1
+        self.static_info.p = [800.0, 0.0, 640.0, 0.0, 0.0, 800.0, 400.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+        self.static_info.r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        self.static_info.distortion_model = "plumb_bob"
+        self.static_info.d = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+        # Subscribers for CameraInfo (from Gazebo) - Kept as fallback
         self.rgb_info_sub = self.create_subscription(CameraInfo, '/oakd/rgb/camera_info', self.rgb_info_callback, 10)
         self.depth_info_sub = self.create_subscription(CameraInfo, '/oakd/depth/camera_info', self.depth_info_callback, 10)
         
@@ -113,8 +124,12 @@ class RTABMapBridgeNode(Node):
             info = self.find_nearest_info(self.rgb_info_buffer, target_ts_ns)
             depth_info = self.find_nearest_info(self.depth_info_buffer, target_ts_ns)
 
-        # Reconstruct ROS 2 stamp from target_ts_ns
-        stamp = info.header.stamp if info else rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
+        # Fallback: Use static info if we haven't received any via ROS 2 discovery
+        if not info:
+            info = self.static_info
+            depth_info = self.static_info
+        
+        stamp = info.header.stamp if info.header.stamp.sec != 0 else rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
         
         # 5. Manually populate ROS 2 Image Messages (Bypass cv_bridge)
         
@@ -129,10 +144,10 @@ class RTABMapBridgeNode(Node):
         rgb_msg.data = rgb_part.tobytes()
         self.rgb_pub.publish(rgb_msg)
         
-        if info:
-            info.header.stamp = stamp
-            info.header.frame_id = "camera_link_optical"
-            self.rgb_info_pub.publish(info)
+        # Publish info
+        info.header.stamp = stamp
+        info.header.frame_id = "camera_link_optical"
+        self.rgb_info_pub.publish(info)
 
         # Depth Message
         depth_msg = Image()
@@ -145,10 +160,10 @@ class RTABMapBridgeNode(Node):
         depth_msg.data = depth_16bit.tobytes()
         self.depth_pub.publish(depth_msg)
 
-        if depth_info:
-            depth_info.header.stamp = stamp
-            depth_info.header.frame_id = "camera_link_optical"
-            self.depth_info_pub.publish(depth_info)
+        # Publish depth info
+        depth_info.header.stamp = stamp
+        depth_info.header.frame_id = "camera_link_optical"
+        self.depth_info_pub.publish(depth_info)
             
         return Gst.FlowReturn.OK
 
