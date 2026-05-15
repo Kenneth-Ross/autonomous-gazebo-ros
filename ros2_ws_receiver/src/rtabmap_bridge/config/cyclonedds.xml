@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://cyclonedds.org/schema/cyclonedds https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+    <Domain id="any">
+        <General>
+            <!-- TODO: USER MUST CONFIGURE NetworkInterfaceAddress (e.g., wlan0, eth0) on the actual device -->
+            <NetworkInterfaceAddress>wlan0</NetworkInterfaceAddress>
+            <AllowMulticast>default</AllowMulticast>
+            <MaxMessageSize>10MB</MaxMessageSize>
+            <FragmentSize>1344</FragmentSize>
+        </General>
+        <Internal>
+            <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
+            <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+        </Internal>
+        <Tracing>
+            <Verbosity>info</Verbosity>
+            <OutputFile>stdout</OutputFile>
+        </Tracing>
+    </Domain>
+</CycloneDDS>

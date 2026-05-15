@@ -9,7 +9,7 @@ def generate_launch_description():
     pkg_share = get_package_share_directory('rtabmap_bridge')
     
     # Force CycloneDDS to only use wlan0 to avoid crashes with Tailscale
-    # This ensures consistency across Desktop and Orange Pi
+    # TODO: Verify interface name (e.g. eth0, wlan0) on the target device
     force_cyclone_if = SetEnvironmentVariable(
         name='CYCLONEDDS_URI',
         value='<CycloneDDS><Domain><General><NetworkInterfaceAddress>wlan0</NetworkInterfaceAddress></General></Domain></CycloneDDS>'

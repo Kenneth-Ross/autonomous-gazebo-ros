@@ -77,11 +77,12 @@ class RTABMapBridgeNode(Node):
         return best_msg
 
     def create_pipeline(self, port):
-        # Using mppvideodec for RK3588 hardware-accelerated H.264 decoding
+        # Using mpphevcdec for RK3588 hardware-accelerated H.265 (HEVC) decoding
+        # HEVC preserves high-frequency depth bit-split data better than H.264.
         pipeline_str = (
             f"udpsrc port={port} ! "
-            "application/x-rtp, encoding-name=H264, payload=96 ! "
-            "rtph264depay ! h264parse ! mppvideodec ! videoconvert ! "
+            "application/x-rtp, encoding-name=H265, payload=96 ! "
+            "rtph265depay ! h265parse ! mpphevcdec ! rgavideoconvert ! "
             "video/x-raw, format=BGR ! appsink name=sink emit-signals=True sync=False"
         )
         pipeline = Gst.parse_launch(pipeline_str)

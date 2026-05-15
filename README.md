@@ -25,32 +25,33 @@ This project enables autonomous navigation and SLAM in a Gazebo simulation by of
 
 ### Prerequisites
 
-- ROS2 Foxy or Humble
-- Gazebo Ignition (Fortress/Garden)
-- GStreamer (for video streaming)
+- ROS 2 Jazzy (for Ubuntu 24.04) or Humble (for Ubuntu 22.04)
+- Gazebo Harmonic or Ignition
+- GStreamer (with Rockchip multimedia plugins for edge devices)
 
 ### Host Setup
 
-1. Build the ROS2 workspace:
+1. Build the ROS 2 workspace:
    ```bash
    cd ros2_ws
    colcon build
    ```
-2. Launch the simulation:
+2. Launch the simulation and streamer:
    ```bash
    source install/setup.bash
-   ros2 launch my_gazebo_package launch_sim.launch.py
+   ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=<EDGE_DEVICE_IP>
    ```
 
 ### Edge Device Setup
 
-1. Run the setup script for your device:
+1. Run the setup script for Ubuntu 24.04:
    ```bash
-   ./scripts/setup_orangepi_foxy.sh
+   ./scripts/setup_orangepi_receiver.sh
    ```
 2. Build the receiver workspace:
    ```bash
    cd ros2_ws_receiver
+   source /opt/ros/jazzy/setup.bash
    colcon build
    ```
 

@@ -1,32 +1,53 @@
-# ROS2 Gazebo Project
+# ROS 2 Gazebo Project (Ubuntu 24.04 / ROS 2 Jazzy)
 
-This project is a ROS2 package (`my_gazebo_package`) designed for use with Gazebo Harmonic and ROS2 Jetty.
+This project is a hybrid ROS 2 system designed for high-performance robotics simulation and edge offloading. It utilizes **ROS 2 Jazzy Jalisco** on **Ubuntu 24.04**.
 
-## Structure:
-- `launch/`: Contains ROS2 launch files to start Gazebo and load models.
-- `models/`: Contains URDF (Unified Robot Description Format) and SDF (Simulation Description Format) files for Gazebo models.
-- `worlds/`: Contains SDF files defining Gazebo worlds.
-- `my_gazebo_package/`: A Python package for ROS2 nodes or utilities.
+## Architecture Overview
+- **Gazebo Host (`ros2_ws/`):** Runs Gazebo Harmonic, robot controllers, and data streamers.
+- **Edge Receiver (`ros2_ws_receiver/`):** Runs on hardware (e.g., Orange Pi 5) for VPU-accelerated decoding, RTAB-Map SLAM, and AI inference.
+- **Streaming:** High-bitrate H.265 (HEVC) "Bit-Split" depth + RGB streaming via GStreamer.
+
+## Project Structure:
+- `ros2_ws/`: Simulation workspace (Gazebo worlds, models, and sender nodes).
+- `ros2_ws_receiver/`: Edge device workspace (receiver nodes, SLAM bridge).
+- `docs/`: Technical specifications and tutorials (see `EDGE_DEVICE.md`).
+- `scripts/`: Automated setup and deployment tools.
 
 ## Getting Started:
 
-### Build
-To build the package, navigate to the `ros2_ws` directory and use colcon build:
+### 1. Build the Workspaces
+**Simulation Host:**
 ```bash
 cd ros2_ws
-colcon build --packages-select my_gazebo_package
+colcon build --symlink-install
 ```
 
-### Source
-Before running any ROS2 commands, source the setup files:
+**Edge Device:**
 ```bash
-source install/setup.bash
+cd ros2_ws_receiver
+colcon build --symlink-install
 ```
 
-### Launch Gazebo
-Example of launching Gazebo with a world or model:
+### 2. Networking (CycloneDDS)
+The project requires `rmw_cyclonedds_cpp`. 
+- **MTU:** Ensure your network supports the 1500 MTU (Standard).
+- **Interface:** Configure your active network interface (e.g., `wlan0`) in `ros2_ws_receiver/src/rtabmap_bridge/config/cyclonedds.xml`.
+
+### 3. Launching
+- **Sim Host:** `ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=<EDGE_IP>`
+- **Edge Device:** `ros2 launch rtabmap_bridge rtabmap_slam.launch.py`
+
+## Git Worktrees
+
+The project utilizes **Git Worktrees** to maintain multiple active environments or specialized versions (e.g., `foxglove_worktree/`) without switching branches in the main directory.
+
+- **Primary Development:** Conducted in the project root.
+- **Specialized Environments:** Managed via worktrees to ensure isolation of build artifacts and configurations.
+- **Exclusion:** Specialized worktrees are typically added to `.gitignore` to prevent recursive tracking.
+
+To add a new worktree:
 ```bash
-ros2 launch my_gazebo_package gazebo.launch.py
+git worktree add ../new_feature_branch feature/new_feature
 ```
 
 ### Troubleshooting `ModuleNotFoundError: No module named 'gi'` with Miniconda

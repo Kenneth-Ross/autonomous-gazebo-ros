@@ -58,12 +58,13 @@ class CombinedStreamer(Node):
         self.get_logger().info(f'OAK-D Combined Streamer (Bit-Split) started. Port: 5000')
 
     def create_gstreamer_pipeline(self):
-        # Use high bitrate to preserve depth MSB/LSB bits
+        # Use H.265 (HEVC) to preserve depth bit-split integrity better than H.264
+        # Target bitrate 20Mbps for high-resolution combined frame
         pipeline_str = (
             "appsrc name=appsrc ! "
             "videoconvert ! "
-            "x264enc tune=zerolatency speed-preset=ultrafast bitrate=12000 ! "
-            "rtph264pay ! "
+            "x265enc tune=zerolatency speed-preset=ultrafast bitrate=20000 ! "
+            "rtph265pay ! "
             f"udpsink host={self.host} port=5000"
         )
         return Gst.parse_launch(pipeline_str)
