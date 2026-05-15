@@ -42,7 +42,8 @@ sudo apt-get install -y --no-install-recommends \
 
 # 5. Build the workspace
 echo "--- Building the local ROS 2 workspace... ---"
-mkdir -p ~/ros2_ws_receiver/src
+# Ensure the package directory exists
+mkdir -p ~/ros2_ws_receiver/src/rtabmap_bridge/rtabmap_bridge
 # Create missing __init__.py for rtabmap_bridge
 touch ~/ros2_ws_receiver/src/rtabmap_bridge/rtabmap_bridge/__init__.py
 
