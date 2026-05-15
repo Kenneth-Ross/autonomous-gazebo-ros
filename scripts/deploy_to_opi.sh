@@ -22,7 +22,7 @@ ssh $TARGET_USER@$TARGET_IP "mkdir -p $TARGET_DIR/src"
 rsync -avz --progress $SOURCE_DIR $TARGET_USER@$TARGET_IP:$TARGET_DIR/
 
 # Sync the setup scripts
-rsync -avz --progress $SCRIPTS_DIR/setup_orangepi_foxy.sh $TARGET_USER@$TARGET_IP:$TARGET_DIR/
+rsync -avz --progress $SCRIPTS_DIR/setup_orangepi_*.sh $TARGET_USER@$TARGET_IP:$TARGET_DIR/
 
 # Sync the model file
 rsync -avz --progress $MODEL_FILE $TARGET_USER@$TARGET_IP:$TARGET_DIR/
