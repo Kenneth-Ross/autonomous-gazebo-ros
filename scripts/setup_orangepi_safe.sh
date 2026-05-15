@@ -43,9 +43,15 @@ sudo apt-get install -y --no-install-recommends \
 # 5. Build the workspace
 echo "--- Building the local ROS 2 workspace... ---"
 mkdir -p ~/ros2_ws_receiver/src
+# Create missing __init__.py for rtabmap_bridge
+touch ~/ros2_ws_receiver/src/rtabmap_bridge/rtabmap_bridge/__init__.py
+
 cd ~/ros2_ws_receiver
 # Note: We need to source ROS 2 to build
 source /opt/ros/foxy/setup.bash
+
+# Build only the packages needed for the MVP
+# We skip edge_device_slam_node because it requires ORB-SLAM3 and complex C++ dependencies.
 colcon build --symlink-install --packages-select rtabmap_bridge edge_oakd_camera_node
 
 echo "--- Setup Complete ---"
