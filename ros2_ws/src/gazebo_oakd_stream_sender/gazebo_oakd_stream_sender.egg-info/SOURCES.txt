@@ -3,6 +3,7 @@ package.xml
 setup.cfg
 setup.py
 gazebo_oakd_stream_sender/__init__.py
+gazebo_oakd_stream_sender/combined_streamer.py
 gazebo_oakd_stream_sender/depth_image_subscriber.py
 gazebo_oakd_stream_sender/left_image_subscriber.py
 gazebo_oakd_stream_sender/rgb_image_subscriber.py

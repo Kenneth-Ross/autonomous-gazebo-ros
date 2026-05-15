@@ -1,4 +1,5 @@
 [console_scripts]
+combined_streamer = gazebo_oakd_stream_sender.combined_streamer:main
 depth_image_subscriber = gazebo_oakd_stream_sender.depth_image_subscriber:main
 left_image_subscriber = gazebo_oakd_stream_sender.left_image_subscriber:main
 rgb_image_subscriber = gazebo_oakd_stream_sender.rgb_image_subscriber:main

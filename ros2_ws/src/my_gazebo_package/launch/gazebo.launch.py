@@ -80,30 +80,20 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Bridge for camera info
+        # Bridge for camera topics (Images and Info)
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
-            name='camera_info_bridge',
+            name='camera_bridge',
             arguments=[
-                '/oakd/rgb/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@/oakd/rgbd_camera/camera_info',
-                '/oakd/depth/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo@/oakd/rgbd_camera/camera_info',
-            ],
-            output='screen'
-        ),
-
-        # Bridge for camera images (Must use image_bridge for sensor_msgs/Image)
-        Node(
-            package='ros_gz_image',
-            executable='image_bridge',
-            name='camera_image_bridge',
-            arguments=[
-                '/oakd/rgbd_camera/image',
-                '/oakd/rgbd_camera/depth_image'
+                '/oakd/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+                '/oakd/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image',
+                '/oakd/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             ],
             remappings=[
                 ('/oakd/rgbd_camera/image', '/oakd/rgb/image_raw'),
-                ('/oakd/rgbd_camera/depth_image', '/oakd/depth/image_raw')
+                ('/oakd/rgbd_camera/depth_image', '/oakd/depth/image_raw'),
+                ('/oakd/rgbd_camera/camera_info', '/oakd/rgb/camera_info'),
             ],
             output='screen'
         ),
@@ -153,14 +143,14 @@ def generate_launch_description():
             actions=[
                 Node(
                     package='my_gazebo_package',
-                    executable='track_generator_node',
+                    executable='track_generator_node.py',
                     name='track_generator',
                     output='screen',
                     parameters=[{'initial_track': initial_track}]
                 ),
                 Node(
                     package='my_gazebo_package',
-                    executable='driving_model_node',
+                    executable='driving_model_node.py',
                     name='driving_model',
                     output='screen',
                     parameters=[{'auto_drive': False}]

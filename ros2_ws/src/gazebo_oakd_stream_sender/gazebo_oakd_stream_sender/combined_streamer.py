@@ -30,10 +30,15 @@ class CombinedStreamer(Node):
         self.rgb_sub = message_filters.Subscriber(self, Image, '/oakd/rgb/image_raw')
         self.depth_sub = message_filters.Subscriber(self, Image, '/oakd/depth/image_raw')
         
+        # Debug connections
+        self.rgb_sub.registerCallback(lambda msg: self.get_logger().info("Got RGB", once=True))
+        self.depth_sub.registerCallback(lambda msg: self.get_logger().info("Got Depth", once=True))
+        
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.rgb_sub, self.depth_sub], queue_size=10, slop=0.05
+            [self.rgb_sub, self.depth_sub], queue_size=30, slop=0.2
         )
         self.ts.registerCallback(self.callback)
+        self.frame_count = 0
 
         Gst.init(None)
         self.pipeline = self.create_gstreamer_pipeline()
@@ -57,13 +62,16 @@ class CombinedStreamer(Node):
         pipeline_str = (
             "appsrc name=appsrc ! "
             "videoconvert ! "
-            "x265enc tune=zerolatency speed-preset=ultrafast bitrate=12000 ! "
-            "rtph265pay ! "
+            "x264enc tune=zerolatency speed-preset=ultrafast bitrate=12000 ! "
+            "rtph264pay ! "
             f"udpsink host={self.host} port=5000"
         )
         return Gst.parse_launch(pipeline_str)
 
     def callback(self, rgb_msg, depth_msg):
+        self.frame_count += 1
+        if self.frame_count % 30 == 0:
+            self.get_logger().info(f"Streaming frame {self.frame_count}...")
         # 1. Convert to OpenCV
         rgb_frame = self.br.imgmsg_to_cv2(rgb_msg, "bgr8")
         depth_meters = self.br.imgmsg_to_cv2(depth_msg, "32FC1")
@@ -85,6 +93,9 @@ class CombinedStreamer(Node):
         
         # 6. Push
         gst_buffer = Gst.Buffer.new_wrapped(combined_frame.tobytes())
+        # Embed ROS 2 Timestamp into GStreamer PTS (nanoseconds)
+        ts_ns = rgb_msg.header.stamp.sec * 1_000_000_000 + rgb_msg.header.stamp.nanosec
+        gst_buffer.pts = ts_ns
         self.appsrc.emit('push-buffer', gst_buffer)
 
 def main(args=None):

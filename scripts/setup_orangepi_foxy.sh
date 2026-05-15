@@ -12,10 +12,11 @@ sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
 # 2. Install ROS 2 and Base GStreamer Tools
-# We skip the liujianfeng PPA as it doesn't support 20.04. 
-# Official OPi OS should already have Rockchip plugins.
-echo "--- Installing ROS 2 Foxy and support libraries... ---"
+echo "--- Fixing potential package skews and installing dependencies... ---"
 sudo apt-get update
+sudo apt-get upgrade -y  # This often resolves the "1.1.2 vs 1.1.1" dependency version mismatch
+
+echo "--- Installing ROS 2 Foxy and support libraries... ---"
 sudo apt-get install -y \
     ros-foxy-desktop \
     ros-foxy-rtabmap-ros \
@@ -27,7 +28,14 @@ sudo apt-get install -y \
     python3-gi \
     ros-foxy-rmw-cyclonedds-cpp \
     gstreamer1.0-tools \
-    libgstreamer1.0-dev
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav
+
+# Fix any lingering dependency issues
+sudo apt-get install -f -y
 
 # 3. Verify Hardware Acceleration Presence
 echo "--- Verifying Rockchip Hardware Acceleration... ---"

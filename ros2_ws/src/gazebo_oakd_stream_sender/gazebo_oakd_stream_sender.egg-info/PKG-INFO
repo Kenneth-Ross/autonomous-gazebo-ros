@@ -8,7 +8,6 @@ License: MIT
 License-File: LICENSE
 Requires-Dist: setuptools
 Requires-Dist: opencv-python
-Requires-Dist: cv_bridge
 Requires-Dist: PyGObject
 Requires-Dist: numpy
 Provides-Extra: test

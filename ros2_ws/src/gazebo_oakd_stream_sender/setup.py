@@ -12,7 +12,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/stream_to_remote.launch.py']),
     ],
-    install_requires=['setuptools', 'opencv-python', 'cv_bridge', 'PyGObject', 'numpy'],
+    install_requires=['setuptools', 'opencv-python', 'PyGObject', 'numpy'],
     zip_safe=True,
     maintainer='k-dev',
     maintainer_email='kennethsross20@gmail.com',

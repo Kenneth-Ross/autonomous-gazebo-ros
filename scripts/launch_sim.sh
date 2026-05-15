@@ -6,8 +6,6 @@ PACKAGE_NAME="my_gazebo_package"
 LAUNCH_FILE="gazebo.launch.py"
 
 # 1. Force Localhost Networking
-# This prevents ROS2 and Gazebo from binding to VPN/WiFi interfaces (like Tailscale)
-# which causes service timeouts and discovery issues.
 export GZ_IP=127.0.0.1
 export ROS_LOCALHOST_ONLY=1
 

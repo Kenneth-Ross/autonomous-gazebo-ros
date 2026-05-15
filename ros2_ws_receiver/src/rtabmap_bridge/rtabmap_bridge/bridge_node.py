@@ -34,10 +34,10 @@ class RTABMapBridgeNode(Node):
         
         Gst.init(None)
         
-        # Single Pipeline: H.265 (Hardware Dec)
+        # Single Pipeline: H.264 (Hardware Dec)
         self.pipeline = self.create_pipeline(self.port)
         
-        self.get_logger().info(f"OAK-D Bridge (Sync Bit-Split): Receiving H.265 on port {self.port}")
+        self.get_logger().info(f"OAK-D Bridge (Sync Bit-Split): Receiving H.264 on port {self.port}")
         self.get_logger().info("Mode: OpenCV-Independent (NumPy Optimized)")
         
         self.pipeline.set_state(Gst.State.PLAYING)
@@ -66,11 +66,11 @@ class RTABMapBridgeNode(Node):
         return best_msg
 
     def create_pipeline(self, port):
-        # Using mppvideodec for RK3588 hardware-accelerated H.265 decoding
+        # Using mppvideodec for RK3588 hardware-accelerated H.264 decoding
         pipeline_str = (
             f"udpsrc port={port} ! "
-            "application/x-rtp, encoding-name=H265, payload=96 ! "
-            "rtph265depay ! h265parse ! mppvideodec ! videoconvert ! "
+            "application/x-rtp, encoding-name=H264, payload=96 ! "
+            "rtph264depay ! h264parse ! mppvideodec ! videoconvert ! "
             "video/x-raw, format=BGR ! appsink name=sink emit-signals=True sync=False"
         )
         pipeline = Gst.parse_launch(pipeline_str)
@@ -84,6 +84,9 @@ class RTABMapBridgeNode(Node):
         if not sample: return Gst.FlowReturn.ERROR
             
         buf = sample.get_buffer()
+        # Use embedded PTS if available, otherwise fallback to arrival time
+        target_ts_ns = buf.pts if buf.pts != Gst.CLOCK_TIME_NONE else arrival_time_ns
+        
         caps = sample.get_caps()
         height = caps.get_structure(0).get_value("height")
         width = caps.get_structure(0).get_value("width") # Expecting 3840 (1280*3)
@@ -107,10 +110,11 @@ class RTABMapBridgeNode(Node):
 
         # 4. Sync with CameraInfo
         with self.lock:
-            info = self.find_nearest_info(self.rgb_info_buffer, arrival_time_ns)
-            depth_info = self.find_nearest_info(self.depth_info_buffer, arrival_time_ns)
+            info = self.find_nearest_info(self.rgb_info_buffer, target_ts_ns)
+            depth_info = self.find_nearest_info(self.depth_info_buffer, target_ts_ns)
 
-        stamp = info.header.stamp if info else self.get_clock().now().to_msg()
+        # Reconstruct ROS 2 stamp from target_ts_ns
+        stamp = info.header.stamp if info else rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
         
         # 5. Manually populate ROS 2 Image Messages (Bypass cv_bridge)
         

@@ -1,6 +1,5 @@
 setuptools
 opencv-python
-cv_bridge
 PyGObject
 numpy
 
