@@ -2,12 +2,24 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('rtabmap_bridge')
     
+    # Force CycloneDDS to only use wlan0 to avoid crashes with Tailscale
+    # This ensures consistency across Desktop and Orange Pi
+    force_cyclone_if = SetEnvironmentVariable(
+        name='CYCLONEDDS_URI',
+        value='<CycloneDDS><Domain><General><NetworkInterfaceAddress>wlan0</NetworkInterfaceAddress></General></Domain></CycloneDDS>'
+    )
+    
+    force_cyclone_rmw = SetEnvironmentVariable(
+        name='RMW_IMPLEMENTATION',
+        value='rmw_cyclonedds_cpp'
+    )
+
     # Parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
@@ -84,6 +96,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        force_cyclone_if,
+        force_cyclone_rmw,
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         ekf_node,
         bridge_node,
