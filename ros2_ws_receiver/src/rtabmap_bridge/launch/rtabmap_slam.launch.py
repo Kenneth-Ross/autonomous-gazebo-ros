@@ -31,7 +31,7 @@ def generate_launch_description():
 
     # RTAB-Map Node
     rtabmap_node = Node(
-        package='rtabmap_ros',
+        package='rtabmap_slam',
         executable='rtabmap',
         name='rtabmap',
         output='screen',
@@ -64,7 +64,7 @@ def generate_launch_description():
 
     # RGB-D Odometry Node (if not using EKF as primary)
     rgbd_odometry_node = Node(
-        package='rtabmap_ros',
+        package='rtabmap_odom',
         executable='rgbd_odometry',
         name='rgbd_odometry',
         output='screen',
