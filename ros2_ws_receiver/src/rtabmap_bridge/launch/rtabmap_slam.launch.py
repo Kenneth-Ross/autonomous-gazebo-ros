@@ -8,11 +8,10 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     pkg_share = get_package_share_directory('rtabmap_bridge')
     
-    # Force CycloneDDS to only use wlan0 to avoid crashes with Tailscale
-    # TODO: Verify interface name (e.g. eth0, wlan0) on the target device
+    # Force CycloneDDS to use the specific ethernet port (enP4p65s0)
     force_cyclone_if = SetEnvironmentVariable(
         name='CYCLONEDDS_URI',
-        value='<CycloneDDS><Domain><General><NetworkInterfaceAddress>wlan0</NetworkInterfaceAddress></General></Domain></CycloneDDS>'
+        value='<CycloneDDS><Domain><General><NetworkInterfaceAddress>enP4p65s0</NetworkInterfaceAddress></General></Domain></CycloneDDS>'
     )
     
     force_cyclone_rmw = SetEnvironmentVariable(
@@ -38,7 +37,10 @@ def generate_launch_description():
         executable='bridge_node',
         name='rtabmap_bridge',
         output='screen',
-        parameters=[{'use_sim_time': use_sim_time}]
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'port': 5000
+        }]
     )
 
     # RTAB-Map Node
