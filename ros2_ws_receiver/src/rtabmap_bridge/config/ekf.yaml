@@ -31,13 +31,13 @@ ekf_filter_node:
                   false, false, true,
                   false, false, false,
                   false, false, true,
-                  true,  false, false]
+                  false, false, false] # Disable X acceleration to avoid control conflict
     imu0_differential: false
     imu0_relative: true
     imu0_remove_gravitational_acceleration: true
 
     # Visual Odometry from RTAB-Map
-    odom1: rtabmap/odom
+    odom1: /rgbd_odometry/odom
     odom1_config: [true,  true,  false,
                    false, false, true,
                    true,  true,  false,

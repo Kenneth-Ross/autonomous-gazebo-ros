@@ -79,7 +79,7 @@ def generate_launch_description():
         name='gt_broadcaster',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'robot_name': 'my_robot'
+            'robot_name': 'ackermann_car'
         }],
         output='screen'
     )
@@ -91,15 +91,15 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='world_to_map_tf',
-        arguments=['0', '0', '0', '0', '0', '0', 'world', 'map'],
+        arguments=['--x', '0', '--y', '0', '--z', '0', '--yaw', '0', '--pitch', '0', '--roll', '0', '--frame-id', 'world', '--child-frame-id', 'map'],
         parameters=[{'use_sim_time': use_sim_time}]
     )
-
+    
     static_tf_camera = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='camera_static_tf',
-        arguments=['0.85', '0', '0.46', '-1.570796', '0', '-1.570796', 'base_link', 'camera_link_optical'],
+        arguments=['--x', '0.85', '--y', '0', '--z', '0.46', '--yaw', '-1.570796', '--pitch', '0', '--roll', '-1.570796', '--frame-id', 'base_link', '--child-frame-id', 'camera_link_optical'],
         parameters=[{'use_sim_time': use_sim_time}]
     )
 
@@ -141,7 +141,8 @@ def generate_launch_description():
             'Grid/MaxGroundHeight': '0.2',
             'Grid/MaxGroundAngle': '45',
             'Grid/RangeMax': '5.0',
-            'subscribe_scan': False
+            'subscribe_scan': False,
+            'wait_for_transform': 0.5
         }],
         remappings=[
             ('rgb/image', '/camera/rgb/image_raw'),
