@@ -132,12 +132,20 @@ class RTABMapBridgeNode(Node):
             info = self.find_nearest_info(self.rgb_info_buffer, target_ts_ns)
             depth_info = self.find_nearest_info(self.depth_info_buffer, target_ts_ns)
 
-        # Fallback: Use static info if we haven't received any via ROS 2 discovery
-        if not info:
+        # Fallback Strategy:
+        # If we have Gazebo info, use its stamp. 
+        # Otherwise, use the arrival time (target_ts_ns) to ensure progress.
+        if info is not None:
+            stamp = info.header.stamp
+        else:
+            # Create a stamp from the arrival time
+            stamp = rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
             info = self.static_info
             depth_info = self.static_info
         
-        stamp = info.header.stamp if info.header.stamp.sec != 0 else rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
+        # Ensure we never send a zero stamp
+        if stamp.sec == 0 and stamp.nanosec == 0:
+             stamp = rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
         
         # 5. Manually populate ROS 2 Image Messages (Bypass cv_bridge)
         
