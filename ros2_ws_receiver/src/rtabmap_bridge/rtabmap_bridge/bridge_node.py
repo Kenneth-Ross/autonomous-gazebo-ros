@@ -17,6 +17,7 @@ class RTABMapBridgeNode(Node):
         self.port = self.get_parameter('port').value
         
         self.lock = threading.Lock()
+        self.frame_count = 0
         
         # Buffers for CameraInfo synchronization
         self.rgb_info_buffer = deque(maxlen=30)
@@ -93,6 +94,10 @@ class RTABMapBridgeNode(Node):
         return pipeline
 
     def on_new_sample(self, sink):
+        self.frame_count += 1
+        if self.frame_count % 30 == 0:
+            self.get_logger().info(f"Bridge received {self.frame_count} frames...")
+            
         arrival_time_ns = self.get_clock().now().nanoseconds
         sample = sink.emit("pull-sample")
         if not sample: return Gst.FlowReturn.ERROR
