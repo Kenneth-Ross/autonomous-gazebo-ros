@@ -77,12 +77,14 @@ class RTABMapBridgeNode(Node):
         return best_msg
 
     def create_pipeline(self, port):
-        # Using mppvideodec for RK3588 hardware-accelerated decoding (HEVC/AVC)
-        # We verified mppvideodec exists and supports HEVC.
+        # Using mppvideodec for hardware decoding.
+        # We use 'videoconvert' here. When the environment variable 
+        # GST_VIDEO_CONVERT_USE_RGA=1 is set, it automatically uses the 
+        # Rockchip RGA hardware for the conversion to BGR.
         pipeline_str = (
             f"udpsrc port={port} ! "
             "application/x-rtp, encoding-name=H265, payload=96 ! "
-            "rtph265depay ! h265parse ! mppvideodec ! rgavideoconvert ! "
+            "rtph265depay ! h265parse ! mppvideodec ! videoconvert ! "
             "video/x-raw, format=BGR ! appsink name=sink emit-signals=True sync=False"
         )
         pipeline = Gst.parse_launch(pipeline_str)

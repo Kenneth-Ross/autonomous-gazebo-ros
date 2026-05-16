@@ -19,6 +19,11 @@ def generate_launch_description():
         value='rmw_cyclonedds_cpp'
     )
 
+    force_rga = SetEnvironmentVariable(
+        name='GST_VIDEO_CONVERT_USE_RGA',
+        value='1'
+    )
+
     # Parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
@@ -100,6 +105,7 @@ def generate_launch_description():
     return LaunchDescription([
         force_cyclone_if,
         force_cyclone_rmw,
+        force_rga,
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         ekf_node,
         bridge_node,
