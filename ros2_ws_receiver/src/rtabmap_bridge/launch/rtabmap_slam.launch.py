@@ -135,7 +135,13 @@ def generate_launch_description():
             'RGBD/LinearUpdate': '0.1',
             'RGBD/AngularUpdate': '0.1',
             'DbSqlite3/InMemory': 'true',
-            'Rtabmap/DetectionRate': '1.0'
+            'Rtabmap/DetectionRate': '1.0',
+            'Grid/FromDepth': 'true',
+            'Grid/Sensor': '0',
+            'Grid/MaxGroundHeight': '0.2',
+            'Grid/MaxGroundAngle': '45',
+            'Grid/RangeMax': '5.0',
+            'subscribe_scan': False
         }],
         remappings=[
             ('rgb/image', '/camera/rgb/image_raw'),

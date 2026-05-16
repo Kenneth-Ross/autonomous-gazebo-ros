@@ -13,6 +13,8 @@ ekf_filter_node:
     base_link_frame: base_link
     world_frame: odom
 
+    publish_tf: true
+
     # Odom from Gazebo (Wheel Encoders)
     odom0: odom
     odom0_config: [true,  true,  false,
