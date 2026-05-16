@@ -5,9 +5,11 @@ WORKSPACE_DIR="/home/k-dev/dev/ros2_gazebo/ros2_ws"
 PACKAGE_NAME="my_gazebo_package"
 LAUNCH_FILE="gazebo.launch.py"
 
-# 1. Force Localhost Networking
+# 1. Enable Network Networking
 export GZ_IP=127.0.0.1
-export ROS_LOCALHOST_ONLY=1
+export ROS_LOCALHOST_ONLY=0
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='<CycloneDDS><Domain><General><NetworkInterfaceAddress>eno1</NetworkInterfaceAddress></General></Domain></CycloneDDS>'
 
 # 2. Source ROS2 and Workspace
 if [ -f "/opt/ros/jazzy/setup.bash" ]; then

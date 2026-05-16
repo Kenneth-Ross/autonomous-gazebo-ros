@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'bridge_node = rtabmap_bridge.bridge_node:main',
+            'unpacker_node = rtabmap_bridge.unpacker_node:main',
             'cone_landmark_processor = rtabmap_bridge.cone_landmark_processor:main'
         ],
     },

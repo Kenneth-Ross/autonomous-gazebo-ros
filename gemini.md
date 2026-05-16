@@ -3,14 +3,20 @@
 This project is a hybrid ROS 2 system designed for high-performance robotics simulation and edge offloading. It utilizes **ROS 2 Jazzy Jalisco** on **Ubuntu 24.04**.
 
 ## Architecture Overview
-- **Gazebo Host (`ros2_ws/`):** Runs Gazebo Harmonic, robot controllers, and data streamers.
-- **Edge Receiver (`ros2_ws_receiver/`):** Runs on hardware (e.g., Orange Pi 5) for VPU-accelerated decoding, RTAB-Map SLAM, and AI inference.
-- **Streaming:** High-bitrate H.265 (HEVC) "Bit-Split" depth + RGB streaming via GStreamer.
+- **Gazebo Host (`ros2_ws/`):** Runs Gazebo Harmonic, robot controllers, and the **Virtual OAK-D Super-Frame Sender**.
+- **Edge Receiver (`ros2_ws_receiver/`):** Runs on hardware (e.g., Orange Pi 5) for **VPU-accelerated decoding** (`hevc_rkmpp`), Depth Unpacking, and RTAB-Map SLAM.
+- **Streaming:** High-fidelity 16-bit Depth + RGB streaming via **FFmpeg Image Transport** using a vertical Super-Frame (1280x2400).
+
+## Virtual OAK-D Super-Frame
+To replicate OAK-D hardware specs and ensure perfect temporal synchronization:
+1. **Vertical Stacking**: RGB (top), MSB Depth (middle), and LSB Depth (bottom) are stacked into a single frame.
+2. **Luminance Protection**: Depth slices are replicated across BGR channels to utilize the full-resolution Luminance (Y) channel in HEVC, protecting 16-bit precision from lossy chroma subsampling.
+3. **Synchronized Unpacking**: The receiver slices the frame and publishes RGB and 16-bit Depth with identical timestamps.
 
 ## Project Structure:
 - `ros2_ws/`: Simulation workspace (Gazebo worlds, models, and sender nodes).
-- `ros2_ws_receiver/`: Edge device workspace (receiver nodes, SLAM bridge).
-- `docs/`: Technical specifications and tutorials (see `EDGE_DEVICE.md`).
+- `ros2_ws_receiver/`: Edge device workspace (unpacker nodes, SLAM bridge).
+- `docs/`: Technical specifications and tutorials.
 - `scripts/`: Automated setup and deployment tools.
 
 ## Getting Started:
@@ -25,16 +31,15 @@ colcon build --symlink-install
 **Edge Device:**
 ```bash
 cd ros2_ws_receiver
-colcon build --symlink-install
+sudo colcon build --symlink-install --merge-install
 ```
 
 ### 2. Networking (CycloneDDS)
 The project requires `rmw_cyclonedds_cpp`. 
-- **MTU:** Ensure your network supports the 1500 MTU (Standard).
-- **Interface:** Configure your active network interface (e.g., `wlan0`) in `ros2_ws_receiver/src/rtabmap_bridge/config/cyclonedds.xml`.
+- **Interface:** Configure your active network interface in `ros2_ws_receiver/src/rtabmap_bridge/config/cyclonedds.xml`.
 
 ### 3. Launching
-- **Sim Host:** `ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=<EDGE_IP>`
+- **Sim Host:** `ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py`
 - **Edge Device:** `ros2 launch rtabmap_bridge rtabmap_slam.launch.py`
 
 ## Git Worktrees

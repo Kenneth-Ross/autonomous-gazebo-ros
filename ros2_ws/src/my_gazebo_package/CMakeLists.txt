@@ -9,18 +9,23 @@ endif()
 find_package(Python3 3.12 EXACT REQUIRED COMPONENTS Interpreter)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+
+# Replace the broken meta-package with specific tools
+find_package(rosidl_cmake REQUIRED)
+find_package(rosidl_generator_c REQUIRED)
+find_package(rosidl_generator_cpp REQUIRED)
+find_package(rosidl_generator_py REQUIRED)
+
 find_package(ros_gz_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
-# Define interfaces
+# Define interfaces - This now ONLY uses the generators we explicitly found
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ChangeTrack.srv"
   DEPENDENCIES geometry_msgs
 )
 
 # Install Python modules
-# This installs the directory 'my_gazebo_package_py'
 ament_python_install_package(my_gazebo_package_py)
 
 # Install Python nodes

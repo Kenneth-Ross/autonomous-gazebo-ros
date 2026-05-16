@@ -19,15 +19,46 @@ def generate_launch_description():
         value='rmw_cyclonedds_cpp'
     )
 
-    force_rga = SetEnvironmentVariable(
-        name='GST_VIDEO_CONVERT_USE_RGA',
-        value='1'
-    )
-
     # Parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
-    # EKF Node
+    # 1. FFmpeg Image Transport Decoder
+    # This node decodes the /ffmpeg stream back to a raw Super-Frame (1280x2400)
+    decoder_node = Node(
+        package='image_transport',
+        executable='republish',
+        name='ffmpeg_decoder',
+        arguments=['ffmpeg', 'raw'],
+        remappings=[
+            ('in/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg'),
+            ('out', '/oakd/super_frame/image_raw')
+        ],
+        parameters=[{'use_sim_time': use_sim_time}],
+        output='screen'
+    )
+
+    # 2. Virtual OAK-D Unpacker Node
+    # Slices the Super-Frame into RGB and 16-bit Depth
+    unpacker_node = Node(
+        package='rtabmap_bridge',
+        executable='unpacker_node',
+        name='virtual_oakd_unpacker',
+        parameters=[{'use_sim_time': use_sim_time}],
+        output='screen'
+    )
+
+    # 3. Static Transform: base_link -> camera_link_optical
+    # Replicates the physical mounting of the OAK-D on the car
+    static_tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='camera_static_tf',
+        arguments=['0.85', '0', '0.46', '-1.570796', '0', '-1.570796', 'base_link', 'camera_link_optical'],
+        parameters=[{'use_sim_time': use_sim_time}]
+    )
+
+    # 4. EKF Node
+    # Fuses Wheel Odom, IMU, and Visual Odom
     ekf_node = Node(
         package='robot_localization',
         executable='ekf_node',
@@ -36,19 +67,7 @@ def generate_launch_description():
         parameters=[os.path.join(pkg_share, 'config', 'ekf.yaml'), {'use_sim_time': use_sim_time}]
     )
 
-    # RTAB-Map Bridge Node
-    bridge_node = Node(
-        package='rtabmap_bridge',
-        executable='bridge_node',
-        name='rtabmap_bridge',
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time,
-            'port': 5000
-        }]
-    )
-
-    # RTAB-Map Node
+    # 5. RTAB-Map Node
     rtabmap_node = Node(
         package='rtabmap_slam',
         executable='rtabmap',
@@ -78,10 +97,10 @@ def generate_launch_description():
             ('depth/camera_info', '/camera/depth/camera_info'),
             ('odom', '/odometry/filtered')
         ],
-        arguments=['-d'] # Delete database on start for clean slate
+        arguments=['-d']
     )
 
-    # RGB-D Odometry Node (if not using EKF as primary)
+    # 6. RGB-D Odometry Node
     rgbd_odometry_node = Node(
         package='rtabmap_odom',
         executable='rgbd_odometry',
@@ -105,10 +124,11 @@ def generate_launch_description():
     return LaunchDescription([
         force_cyclone_if,
         force_cyclone_rmw,
-        force_rga,
         DeclareLaunchArgument('use_sim_time', default_value='true'),
+        decoder_node,
+        unpacker_node,
+        static_tf_node,
         ekf_node,
-        bridge_node,
         rtabmap_node,
         rgbd_odometry_node
     ])

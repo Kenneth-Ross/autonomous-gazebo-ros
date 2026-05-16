@@ -2,9 +2,6 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
 import numpy as np
 import message_filters
 import cv2
@@ -13,26 +10,21 @@ class CombinedStreamer(Node):
     def __init__(self):
         super().__init__('combined_streamer')
 
-        self.declare_parameter('host', '127.0.0.1')
-        self.host = self.get_parameter('host').get_parameter_value().string_value
-
         # OAK-D Resolution
         self.width = 1280
         self.height = 800
         
-        # Combined frame: [RGB | MSB | LSB]
-        self.combined_width = self.width * 3
-        self.combined_height = self.height
+        # Super-Frame: [RGB | MSB | LSB] stacked vertically
+        # Resulting size: 1280 x 2400
         
         self.br = CvBridge()
+
+        # Publisher for the Super-Frame
+        self.pub = self.create_publisher(Image, '/oakd/super_frame/image_raw', 10)
 
         # Synchronized Subscriptions
         self.rgb_sub = message_filters.Subscriber(self, Image, '/oakd/rgb/image_raw')
         self.depth_sub = message_filters.Subscriber(self, Image, '/oakd/depth/image_raw')
-        
-        # Debug connections
-        self.rgb_sub.registerCallback(lambda msg: self.get_logger().info("Got RGB", once=True))
-        self.depth_sub.registerCallback(lambda msg: self.get_logger().info("Got Depth", once=True))
         
         self.ts = message_filters.ApproximateTimeSynchronizer(
             [self.rgb_sub, self.depth_sub], queue_size=30, slop=0.2
@@ -40,39 +32,13 @@ class CombinedStreamer(Node):
         self.ts.registerCallback(self.callback)
         self.frame_count = 0
 
-        Gst.init(None)
-        self.pipeline = self.create_gstreamer_pipeline()
-        self.appsrc = self.pipeline.get_by_name('appsrc')
-
-        caps_str = (
-            f"video/x-raw,"
-            f"format=BGR,"
-            f"width={self.combined_width},"
-            f"height={self.combined_height},"
-            f"framerate=30/1"
-        )
-        self.appsrc.set_property('caps', Gst.Caps.from_string(caps_str))
-        self.appsrc.set_property('format', 'time')
-        
-        self.pipeline.set_state(Gst.State.PLAYING)
-        self.get_logger().info(f'OAK-D Combined Streamer (Bit-Split) started. Port: 5000')
-
-    def create_gstreamer_pipeline(self):
-        # Use H.265 (HEVC) to preserve depth bit-split integrity better than H.264
-        # Target bitrate 20Mbps for high-resolution combined frame
-        pipeline_str = (
-            "appsrc name=appsrc ! "
-            "videoconvert ! "
-            "x265enc tune=zerolatency speed-preset=ultrafast bitrate=20000 ! "
-            "rtph265pay ! "
-            f"udpsink host={self.host} port=5000"
-        )
-        return Gst.parse_launch(pipeline_str)
+        self.get_logger().info('Virtual OAK-D Super-Frame Streamer started.')
 
     def callback(self, rgb_msg, depth_msg):
         self.frame_count += 1
         if self.frame_count % 30 == 0:
-            self.get_logger().info(f"Streaming frame {self.frame_count}...")
+            self.get_logger().info(f"Processing Super-Frame {self.frame_count}...")
+        
         # 1. Convert to OpenCV
         rgb_frame = self.br.imgmsg_to_cv2(rgb_msg, "bgr8")
         depth_meters = self.br.imgmsg_to_cv2(depth_msg, "32FC1")
@@ -89,15 +55,13 @@ class CombinedStreamer(Node):
         depth_msb_bgr = cv2.cvtColor(depth_msb, cv2.COLOR_GRAY2BGR)
         depth_lsb_bgr = cv2.cvtColor(depth_lsb, cv2.COLOR_GRAY2BGR)
         
-        # 5. Concatenate
-        combined_frame = np.hstack((rgb_frame, depth_msb_bgr, depth_lsb_bgr))
+        # 5. Vertical Stack: [RGB (800) / MSB (800) / LSB (800)] -> 2400 height
+        super_frame = np.vstack((rgb_frame, depth_msb_bgr, depth_lsb_bgr))
         
-        # 6. Push
-        gst_buffer = Gst.Buffer.new_wrapped(combined_frame.tobytes())
-        # Embed ROS 2 Timestamp into GStreamer PTS (nanoseconds)
-        ts_ns = rgb_msg.header.stamp.sec * 1_000_000_000 + rgb_msg.header.stamp.nanosec
-        gst_buffer.pts = ts_ns
-        self.appsrc.emit('push-buffer', gst_buffer)
+        # 6. Publish with the original timestamp
+        msg = self.br.cv2_to_imgmsg(super_frame, encoding="bgr8")
+        msg.header = rgb_msg.header
+        self.pub.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -107,7 +71,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        streamer.pipeline.set_state(Gst.State.NULL)
         streamer.destroy_node()
         rclpy.shutdown()
 
