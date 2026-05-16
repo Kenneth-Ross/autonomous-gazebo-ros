@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
@@ -8,6 +7,8 @@ from gi.repository import Gst, GLib
 import numpy as np
 import threading
 from collections import deque
+import cv2
+from cv_bridge import CvBridge
 
 class RTABMapBridgeNode(Node):
     def __init__(self):
@@ -18,6 +19,7 @@ class RTABMapBridgeNode(Node):
         
         self.lock = threading.Lock()
         self.frame_count = 0
+        self.br = CvBridge()
         
         # Buffers for CameraInfo synchronization
         self.rgb_info_buffer = deque(maxlen=30)
@@ -34,24 +36,18 @@ class RTABMapBridgeNode(Node):
         self.static_info.header.frame_id = "camera_link_optical"
         self.static_info.width = 1280
         self.static_info.height = 800
-        self.static_info.k = [800.0, 0.0, 640.0, 0.0, 800.0, 400.0, 0.0, 0.0, 1.0] # Fx, 0, Cx, 0, Fy, Cy, 0, 0, 1
+        self.static_info.k = [800.0, 0.0, 640.0, 0.0, 800.0, 400.0, 0.0, 0.0, 1.0]
         self.static_info.p = [800.0, 0.0, 640.0, 0.0, 0.0, 800.0, 400.0, 0.0, 0.0, 0.0, 1.0, 0.0]
         self.static_info.r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
         self.static_info.distortion_model = "plumb_bob"
         self.static_info.d = [0.0, 0.0, 0.0, 0.0, 0.0]
 
-        # Subscribers for CameraInfo (from Gazebo) - Kept as fallback
         self.rgb_info_sub = self.create_subscription(CameraInfo, '/oakd/rgb/camera_info', self.rgb_info_callback, 10)
         self.depth_info_sub = self.create_subscription(CameraInfo, '/oakd/depth/camera_info', self.depth_info_callback, 10)
         
         Gst.init(None)
-        
-        # Single Pipeline: H.264 (Hardware Dec)
         self.pipeline = self.create_pipeline(self.port)
-        
-        self.get_logger().info(f"OAK-D Bridge (Sync Bit-Split): Receiving H.264 on port {self.port}")
-        self.get_logger().info("Mode: OpenCV-Independent (NumPy Optimized)")
-        
+        self.get_logger().info(f"OAK-D Bridge (OpenCV Mode): Port {self.port}")
         self.pipeline.set_state(Gst.State.PLAYING)
 
     def rgb_info_callback(self, msg):
@@ -63,8 +59,7 @@ class RTABMapBridgeNode(Node):
             self.depth_info_buffer.append(msg)
 
     def find_nearest_info(self, buffer, target_stamp_ns):
-        if not buffer:
-            return None
+        if not buffer: return None
         best_msg = None
         min_diff = float('inf')
         for msg in buffer:
@@ -73,15 +68,9 @@ class RTABMapBridgeNode(Node):
             if diff < min_diff:
                 min_diff = diff
                 best_msg = msg
-        if min_diff > 1e8: # 100ms
-            return None
-        return best_msg
+        return best_msg if min_diff < 1e8 else None
 
     def create_pipeline(self, port):
-        # Using mppvideodec for hardware decoding.
-        # We use 'videoconvert' here. When the environment variable 
-        # GST_VIDEO_CONVERT_USE_RGA=1 is set, it automatically uses the 
-        # Rockchip RGA hardware for the conversion to BGR.
         pipeline_str = (
             f"udpsrc port={port} ! "
             "application/x-rtp, encoding-name=H265, payload=96 ! "
@@ -95,93 +84,82 @@ class RTABMapBridgeNode(Node):
 
     def on_new_sample(self, sink):
         self.frame_count += 1
-        if self.frame_count % 30 == 0:
-            self.get_logger().info(f"Bridge received {self.frame_count} frames...")
-            
         arrival_time_ns = self.get_clock().now().nanoseconds
         sample = sink.emit("pull-sample")
         if not sample: return Gst.FlowReturn.ERROR
             
         buf = sample.get_buffer()
-        # Use embedded PTS if available, otherwise fallback to arrival time
         target_ts_ns = buf.pts if buf.pts != Gst.CLOCK_TIME_NONE else arrival_time_ns
         
         caps = sample.get_caps()
-        height = caps.get_structure(0).get_value("height")
-        width = caps.get_structure(0).get_value("width") # Expecting 3840 (1280*3)
+        h = caps.get_structure(0).get_value("height")
+        w = caps.get_structure(0).get_value("width")
         
         res, map_info = buf.map(Gst.MapFlags.READ)
         if not res: return Gst.FlowReturn.ERROR
             
-        # 1. Map to NumPy directly (Zero-Copy)
-        raw_frame = np.frombuffer(map_info.data, dtype=np.uint8).reshape((height, width, 3))
+        # Convert GStreamer buffer to OpenCV/NumPy
+        frame = np.frombuffer(map_info.data, dtype=np.uint8).reshape((h, w, 3))
         
-        # 2. Slice the frame: [ RGB (0:1280) | MSB (1280:2560) | LSB (2560:3840) ]
-        single_w = width // 3
-        rgb_part = raw_frame[:, 0:single_w, :]
-        msb_part = raw_frame[:, single_w:2*single_w, 0] # Use only one channel for grayscale depth bytes
-        lsb_part = raw_frame[:, 2*single_w:3*single_w, 0]
+        # Slice: [ RGB (1280) | MSB (1280) | LSB (1280) ]
+        sw = w // 3
+        bgr_frame = frame[:, 0:sw, :]
+        msb_frame = frame[:, sw:2*sw, 0] # Use only one channel
+        lsb_frame = frame[:, 2*sw:3*sw, 0]
         
-        # 3. Reconstruct 16-bit Depth (Vectorized NumPy)
-        depth_16bit = (msb_part.astype(np.uint16) << 8) | lsb_part.astype(np.uint16)
+        # Reconstruct 16-bit Depth
+        depth_16bit = (msb_frame.astype(np.uint16) << 8) | lsb_frame.astype(np.uint16)
         
         buf.unmap(map_info)
 
-        # 4. Sync with CameraInfo
+        # Sync/Fallback Timestamps
         with self.lock:
             info = self.find_nearest_info(self.rgb_info_buffer, target_ts_ns)
             depth_info = self.find_nearest_info(self.depth_info_buffer, target_ts_ns)
 
-        # Fallback Strategy:
-        # If we have Gazebo info, use its stamp. 
-        # Otherwise, use the arrival time (target_ts_ns) to ensure progress.
         if info is not None:
             stamp = info.header.stamp
         else:
-            # Create a stamp from the arrival time
             stamp = rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
             info = self.static_info
             depth_info = self.static_info
-        
-        # Ensure we never send a zero stamp
+
+        # Force valid stamp
         if stamp.sec == 0 and stamp.nanosec == 0:
-             stamp = rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
+            stamp = rclpy.time.Time(nanoseconds=target_ts_ns).to_msg()
+
+        # Publish Images
+        self.rgb_pub.publish(self.br.cv2_to_imgmsg(bgr_frame, encoding="bgr8", header=info.header))
+        self.depth_pub.publish(self.br.cv2_to_imgmsg(depth_16bit, encoding="16UC1", header=info.header))
         
-        # 5. Manually populate ROS 2 Image Messages (Bypass cv_bridge)
-        
-        # RGB Message
-        rgb_msg = Image()
-        rgb_msg.header.stamp = stamp
-        rgb_msg.header.frame_id = "camera_link_optical"
-        rgb_msg.height = height
-        rgb_msg.width = single_w
-        rgb_msg.encoding = "bgr8"
-        rgb_msg.step = single_w * 3
-        rgb_msg.data = rgb_part.tobytes()
-        self.rgb_pub.publish(rgb_msg)
-        
-        # Publish info
+        # Update and publish info
         info.header.stamp = stamp
         info.header.frame_id = "camera_link_optical"
         self.rgb_info_pub.publish(info)
-
-        # Depth Message
-        depth_msg = Image()
-        depth_msg.header.stamp = stamp
-        depth_msg.header.frame_id = "camera_link_optical"
-        depth_msg.height = height
-        depth_msg.width = single_w
-        depth_msg.encoding = "16UC1"
-        depth_msg.step = single_w * 2
-        depth_msg.data = depth_16bit.tobytes()
-        self.depth_pub.publish(depth_msg)
-
-        # Publish depth info
+        
         depth_info.header.stamp = stamp
         depth_info.header.frame_id = "camera_link_optical"
         self.depth_info_pub.publish(depth_info)
             
+        if self.frame_count % 30 == 0:
+            self.get_logger().info(f"Published frame {self.frame_count}")
+            
         return Gst.FlowReturn.OK
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = RTABMapBridgeNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.pipeline.set_state(Gst.State.NULL)
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
 
 def main(args=None):
     rclpy.init(args=args)
