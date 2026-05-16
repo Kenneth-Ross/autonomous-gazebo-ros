@@ -47,9 +47,52 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 3. Static Transform: base_link -> camera_link_optical
-    # Replicates the physical mounting of the OAK-D on the car
-    static_tf_node = Node(
+    # 3. Foxglove Bridge (Whitelisted for Digital Twin)
+    # Allows remote visualization without saturating the CPU/Network
+    foxglove_bridge = Node(
+        package='foxglove_bridge',
+        executable='foxglove_bridge',
+        name='foxglove_bridge',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'port': 8765,
+            'address': '0.0.0.0',
+            'topic_whitelist': [
+                '^/tf$', '^/tf_static$', 
+                '^/map$', '^/odometry/filtered$',
+                '^/rtabmap/.*', 
+                '^/ground_truth/tf$',
+                '^/camera/rgb/image_raw/compressed$' # Optional compressed preview
+            ]
+        }],
+        output='screen'
+    )
+
+    # 4. Ground Truth Broadcaster (Digital Twin)
+    # Maps Gazebo model pose to 'ground_truth_base_link' anchored at 'world'
+    gt_broadcaster = Node(
+        package='rtabmap_bridge',
+        executable='ground_truth_broadcaster',
+        name='gt_broadcaster',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'robot_name': 'my_robot'
+        }],
+        output='screen'
+    )
+
+    # 5. Static Transforms
+    # world -> map (anchors SLAM to GT origin)
+    # base_link -> camera_link_optical (physical mounting)
+    static_tf_world_map = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='world_to_map_tf',
+        arguments=['0', '0', '0', '0', '0', '0', 'world', 'map'],
+        parameters=[{'use_sim_time': use_sim_time}]
+    )
+
+    static_tf_camera = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='camera_static_tf',
@@ -57,7 +100,8 @@ def generate_launch_description():
         parameters=[{'use_sim_time': use_sim_time}]
     )
 
-    # 4. EKF Node
+    # 6. EKF Node
+
     # Fuses Wheel Odom, IMU, and Visual Odom
     ekf_node = Node(
         package='robot_localization',
@@ -127,7 +171,10 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         decoder_node,
         unpacker_node,
-        static_tf_node,
+        foxglove_bridge,
+        gt_broadcaster,
+        static_tf_world_map,
+        static_tf_camera,
         ekf_node,
         rtabmap_node,
         rgbd_odometry_node
