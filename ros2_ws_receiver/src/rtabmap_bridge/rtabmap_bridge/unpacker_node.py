@@ -33,7 +33,7 @@ class UnpackerNode(Node):
         # Subscriber to the Super-Frame
         self.sub = self.create_subscription(
             Image,
-            '/oakd/super_frame/image_raw',
+            'image_in',
             self.callback,
             10
         )

@@ -19,8 +19,8 @@ class CombinedStreamer(Node):
         
         self.br = CvBridge()
 
-        # Publisher for the Super-Frame
-        self.pub = self.create_publisher(Image, '/oakd/super_frame/image_raw', 10)
+        # Publisher for the Super-Frame (Local-only, will be encoded by republish)
+        self.pub = self.create_publisher(Image, '~/super_frame_local', 10)
 
         # Synchronized Subscriptions
         self.rgb_sub = message_filters.Subscriber(self, Image, '/oakd/rgb/image_raw')

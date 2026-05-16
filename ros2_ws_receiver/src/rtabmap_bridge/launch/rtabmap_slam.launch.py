@@ -31,7 +31,7 @@ def generate_launch_description():
         arguments=['ffmpeg', 'raw'],
         remappings=[
             ('in/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg'),
-            ('out', '/oakd/super_frame/image_raw')
+            ('out', '~/super_frame_local')
         ],
         parameters=[{'use_sim_time': use_sim_time}],
         output='screen'
@@ -43,6 +43,9 @@ def generate_launch_description():
         package='rtabmap_bridge',
         executable='unpacker_node',
         name='virtual_oakd_unpacker',
+        remappings=[
+            ('image_in', '/ffmpeg_decoder/super_frame_local')
+        ],
         parameters=[{'use_sim_time': use_sim_time}],
         output='screen'
     )

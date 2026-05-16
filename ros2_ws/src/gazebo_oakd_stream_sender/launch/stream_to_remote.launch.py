@@ -20,7 +20,7 @@ def generate_launch_description():
             name='ffmpeg_republish',
             arguments=['raw', 'ffmpeg'],
             remappings=[
-                ('in', '/oakd/super_frame/image_raw'),
+                ('in', '/oakd_combined_streamer/super_frame_local'),
                 ('out/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg')
             ],
             parameters=[{

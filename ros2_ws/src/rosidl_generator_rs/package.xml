@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rosidl_generator_rs</name>
+  <version>99.99.99</version>
+  <description>Dummy shadowing package to disable the broken system generator</description>
+  <maintainer email="k-dev@todo.todo">k-dev</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
