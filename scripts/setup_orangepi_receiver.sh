@@ -22,6 +22,7 @@ sudo apt-get install -y \
     ros-jazzy-robot-localization \
     ros-jazzy-rmw-cyclonedds-cpp \
     ros-jazzy-depthimage-to-laserscan \
+    ros-jazzy-vision-msgs \
     python3-opencv \
     python3-numpy \
     python3-gi \

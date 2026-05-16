@@ -13,6 +13,13 @@ To replicate OAK-D hardware specs and ensure perfect temporal synchronization:
 2. **Luminance Protection**: Depth slices are replicated across BGR channels to utilize the full-resolution Luminance (Y) channel in HEVC, protecting 16-bit precision from lossy chroma subsampling.
 3. **Synchronized Unpacking**: The receiver slices the frame and publishes RGB and 16-bit Depth with identical timestamps.
 
+## Semantic Mapping & RKNN NPU Acceleration
+The project is currently transitioning from geometric SLAM to **Semantic SLAM** by leveraging the RK3588 NPU:
+1. **Accelerated Inference**: Using `rknpu2` and RKNN-converted YOLOv11 models to detect racing cones at 30+ FPS.
+2. **3D Projection**: 2D bounding boxes are projected into 3D space using the synchronized 16-bit depth from the Virtual OAK-D pipeline.
+3. **Landmark Injection**: Cones are injected into RTAB-Map as persistent landmarks (via `User Data` or `Landmark` topics) to enhance loop closure and create a labeled race track map.
+4. **Robust Distance Calculation**: Implementation of a 5x5 window average on depth ROI to handle sensor noise and depth "holes" at object boundaries.
+
 ## Project Structure:
 - `ros2_ws/`: Simulation workspace (Gazebo worlds, models, and sender nodes).
 - `ros2_ws_receiver/`: Edge device workspace (unpacker nodes, SLAM bridge).
