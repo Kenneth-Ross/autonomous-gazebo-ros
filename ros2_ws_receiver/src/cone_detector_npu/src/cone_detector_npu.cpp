@@ -135,20 +135,17 @@ private:
         // Post-processing for 1-tensor output: [1, 5, 3549]
         // Format: [0:cx, 1:cy, 2:w, 3:h, 4:score] (Single class model)
         float* data = (float*)outputs[0].buf;
-        int num_channels = output_attrs[0].dims[1]; // 5
         int num_anchors = output_attrs[0].dims[2];  // 3549
         float conf_threshold = this->get_parameter("confidence_threshold").as_double();
+        float nms_threshold = this->get_parameter("nms_threshold").as_double();
         
-        vision_msgs::msg::Detection2DArray det_array;
-        det_array.header = msg->header;
+        std::vector<vision_msgs::msg::Detection2D> candidate_dets;
 
         for (int i = 0; i < num_anchors; i++) {
             float score = data[4 * num_anchors + i]; // Score is at channel index 4
 
             if (score > conf_threshold) {
                 vision_msgs::msg::Detection2D det;
-                // Coordinates are typically in model space (0-416) or normalized (0-1)
-                // Assuming model space [416x416] based on the test script success
                 float cx = data[0 * num_anchors + i] * img_width / model_w;
                 float cy = data[1 * num_anchors + i] * img_height / model_h;
                 float w = data[2 * num_anchors + i] * img_width / model_w;
@@ -164,10 +161,44 @@ private:
                 hyp.hypothesis.score = score;
                 det.results.push_back(hyp);
                 
-                det_array.detections.push_back(det);
+                candidate_dets.push_back(det);
             }
         }
 
+        // Apply Non-Maximum Suppression (NMS)
+        std::sort(candidate_dets.begin(), candidate_dets.end(), [](const auto& a, const auto& b) {
+            return a.results[0].hypothesis.score > b.results[0].hypothesis.score;
+        });
+
+        vision_msgs::msg::Detection2DArray det_array;
+        det_array.header = msg->header;
+        std::vector<bool> is_suppressed(candidate_dets.size(), false);
+
+        for (size_t i = 0; i < candidate_dets.size(); ++i) {
+            if (is_suppressed[i]) continue;
+            det_array.detections.push_back(candidate_dets[i]);
+
+            for (size_t j = i + 1; j < candidate_dets.size(); ++j) {
+                if (is_suppressed[j]) continue;
+                
+                // Calculate Intersection over Union (IoU)
+                auto& b1 = candidate_dets[i].bbox;
+                auto& b2 = candidate_dets[j].bbox;
+                
+                float x1 = std::max(b1.center.position.x - b1.size_x/2, b2.center.position.x - b2.size_x/2);
+                float y1 = std::max(b1.center.position.y - b1.size_y/2, b2.center.position.y - b2.size_y/2);
+                float x2 = std::min(b1.center.position.x + b1.size_x/2, b2.center.position.x + b2.size_x/2);
+                float y2 = std::min(b1.center.position.y + b1.size_y/2, b2.center.position.y + b2.size_y/2);
+                
+                float inter_area = std::max(0.0f, x2 - x1) * std::max(0.0f, y2 - y1);
+                float union_area = b1.size_x * b1.size_y + b2.size_x * b2.size_y - inter_area;
+                
+                if (inter_area / union_area > nms_threshold) {
+                    is_suppressed[j] = true;
+                }
+            }
+        }
+        
         publisher_->publish(det_array);
         rknn_outputs_release(ctx, 1, outputs);
     }
