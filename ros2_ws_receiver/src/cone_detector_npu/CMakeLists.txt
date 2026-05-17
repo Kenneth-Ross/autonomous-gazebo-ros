@@ -15,8 +15,18 @@ find_package(OpenCV REQUIRED)
 
 # RKNN setup
 set(RKNN_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../external/rknpu2")
-find_library(RKNN_LIB rknnrt PATHS "${RKNN_BASE_DIR}" NO_DEFAULT_PATH)
+find_library(RKNN_LIB rknnrt 
+  PATHS 
+    "/usr/lib"
+    "/usr/local/lib"
+    "${RKNN_BASE_DIR}"
+)
 set(RKNN_INCLUDE_DIR "${RKNN_BASE_DIR}/include")
+
+if(NOT RKNN_LIB)
+  message(FATAL_ERROR "RKNN library (librknnrt.so) NOT found. Please ensure it is in /usr/lib or ${RKNN_BASE_DIR}")
+endif()
+message(STATUS "Found RKNN library: ${RKNN_LIB}")
 
 add_executable(cone_detector_npu src/cone_detector_npu.cpp)
 target_include_directories(cone_detector_npu PUBLIC
