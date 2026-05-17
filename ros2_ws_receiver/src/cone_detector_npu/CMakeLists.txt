@@ -33,6 +33,7 @@ target_include_directories(cone_detector_npu PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
   ${OpenCV_INCLUDE_DIRS}
+  ${cv_bridge_INCLUDE_DIRS}
   ${RKNN_INCLUDE_DIR}
 )
 
