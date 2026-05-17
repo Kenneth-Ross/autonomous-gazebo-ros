@@ -74,10 +74,12 @@ def test_inference(model_path):
             return
 
     # Create dummy input (assuming 416x416 RGB for YOLOv11n)
+    # The runtime expects a 4D tensor: (Batch, Height, Width, Channels)
     img = np.random.randint(0, 255, (416, 416, 3), dtype=np.uint8)
+    img_4d = np.expand_dims(img, axis=0) # Shape becomes (1, 416, 416, 3)
     
-    print("Running inference...")
-    outputs = rknn.inference(inputs=[img])
+    print(f"Running inference with input shape: {img_4d.shape}...")
+    outputs = rknn.inference(inputs=[img_4d])
     
     if outputs:
         print("SUCCESS: Inference completed.")
