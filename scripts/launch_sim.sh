@@ -9,7 +9,7 @@ LAUNCH_FILE="gazebo.launch.py"
 export GZ_IP=127.0.0.1
 export ROS_LOCALHOST_ONLY=0
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI='<CycloneDDS><Domain><General><NetworkInterfaceAddress>eno1</NetworkInterfaceAddress></General></Domain></CycloneDDS>'
+export CYCLONEDDS_URI='<CycloneDDS><Domain><General><Interfaces><NetworkInterface name="wlp9s0"/></Interfaces></General></Domain></CycloneDDS>'
 
 # 2. Source ROS2 and Workspace
 if [ -f "/opt/ros/jazzy/setup.bash" ]; then
