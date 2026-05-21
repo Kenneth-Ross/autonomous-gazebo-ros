@@ -5,7 +5,7 @@ This project enables autonomous navigation and SLAM in a Gazebo simulation by of
 ## Overview
 
 - **Simulation Host:** Runs Gazebo and ROS2. Streams camera data over the network using GStreamer or ROS2 topics.
-- **Edge Device:** Receives the stream, performs inference (YOLOv11), and runs SLAM (ORB-SLAM3 or RTAB-Map).
+- **Edge Device:** Receives the stream, performs inference (YOLOv11), and runs SLAM (RTAB-Map).
 - **Communication:** Uses ROS2 for control and state, and GStreamer for high-performance video streaming.
 
 ## Project Structure
@@ -14,10 +14,10 @@ This project enables autonomous navigation and SLAM in a Gazebo simulation by of
   - `my_gazebo_package`: Contains URDF models and Gazebo worlds.
   - `gazebo_oakd_stream_sender`: Node for streaming OAK-D camera data.
 - `ros2_ws_receiver/`: ROS2 workspace for the edge device.
-  - `edge_device_slam_node`: ORB-SLAM3 integration for the edge device.
   - `rtabmap_bridge`: Bridge for RTAB-Map SLAM.
+  - `edge_oakd_camera_node`: Receiver for OAK-D camera streams.
+  - `edge_nav2`: Navigation stack configuration for the edge device.
 - `external/`: Third-party dependencies.
-  - `ORB_SLAM3`: Modified version of ORB-SLAM3 for edge processing.
   - `rknpu2`: Rockchip NPU driver and API.
 - `scripts/`: Deployment and setup scripts for both host and edge device.
 
@@ -58,7 +58,7 @@ This project enables autonomous navigation and SLAM in a Gazebo simulation by of
 ## Documentation
 
 - [Tutorial: Offloading Gazebo Camera Data](docs/TUTORIAL.md)
-- [Edge Device SLAM Plan](ros2_ws/docs/edge_device_slam_plan.md)
+- [RTAB-Map SLAM Plan](plans/rtabmap_edge_slam_plan.md)
 
 ## License
 
