@@ -32,7 +32,4 @@ video1/
 *.log
 
 # Submodules / Nested repos
-# If you want to track ORB_SLAM3 as source, comment the next line.
-# If you want it as a submodule, it will be handled by .gitmodules.
-# external/ORB_SLAM3/.git
 foxglove_worktree/

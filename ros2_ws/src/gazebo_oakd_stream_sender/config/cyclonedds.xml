@@ -7,7 +7,7 @@
                 <NetworkInterface name="any"/>
             </Interfaces>
             <AllowMulticast>default</AllowMulticast>
-            <MaxMessageSize>10MB</MaxMessageSize>
+            <MaxMessageSize>10485760</MaxMessageSize>
             <FragmentSize>1344</FragmentSize>
         </General>
         <Discovery>
@@ -17,8 +17,7 @@
             </Peers>
         </Discovery>
         <Internal>
-            <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
-            <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+            <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
         </Internal>
     </Domain>
 </CycloneDDS>
