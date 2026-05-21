@@ -151,12 +151,14 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
+                'qos_image': 1, # 1 = Best Effort (SENSOR_DATA)
+                'qos_camera_info': 1,
                 'frame_id': 'base_link',
                 'map_frame_id': 'map',
                 'odom_frame_id': 'odom',
                 'publish_tf': True,
                 'approx_sync': True,
-                'approx_sync_max_interval': 0.1,
+                'approx_sync_max_interval': 0.1, # 100ms slop for network jitter
                 'queue_size': 50,
                 'sync_queue_size': 50,
                 'Vis/MaxFeatures': '600',
@@ -192,6 +194,8 @@ def generate_launch_description():
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'frame_id': 'base_link',
+                'qos': 1, # 1 = Best Effort (SENSOR_DATA)
+                'qos_camera_info': 1,
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
                 'approx_sync': True,

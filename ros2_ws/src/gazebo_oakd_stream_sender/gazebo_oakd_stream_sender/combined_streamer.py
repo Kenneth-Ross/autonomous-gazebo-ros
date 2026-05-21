@@ -5,6 +5,7 @@ from cv_bridge import CvBridge
 import numpy as np
 import message_filters
 import cv2
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class CombinedStreamer(Node):
     def __init__(self):
@@ -14,25 +15,48 @@ class CombinedStreamer(Node):
         self.width = 1280
         self.height = 800
         
-        # Super-Frame: [RGB | MSB | LSB] stacked vertically
-        # Resulting size: 1280 x 2400
+        # Super-Frame (Horizontal Panorama): [RGB | MSB | LSB] stacked horizontally
+        # Resulting size: 3840 x 800 (Within 4K horizontal limits)
         
         self.br = CvBridge()
 
-        # Publisher for the Super-Frame (Local-only, will be encoded by republish)
-        self.pub = self.create_publisher(Image, '~/super_frame_local', 10)
+        # Publisher for the Super-Frame (Local-only)
+        # Using SENSOR_DATA (Best Effort) for high bandwidth
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5
+        )
+        self.pub = self.create_publisher(Image, '~/super_frame_local', qos_profile)
 
-        # Synchronized Subscriptions
-        self.rgb_sub = message_filters.Subscriber(self, Image, '/oakd/rgb/image_raw')
-        self.depth_sub = message_filters.Subscriber(self, Image, '/oakd/depth/image_raw')
+        # Synchronized Subscriptions (Using Best Effort to match Gazebo bridge)
+        self.rgb_sub = message_filters.Subscriber(
+            self, Image, '/oakd/rgb/image_raw', qos_profile=qos_profile)
+        self.depth_sub = message_filters.Subscriber(
+            self, Image, '/oakd/depth/image_raw', qos_profile=qos_profile)
         
+        # Diagnostic counters to see if we're even receiving raw data
+        self.rgb_count = 0
+        self.depth_count = 0
+        self.rgb_sub.registerCallback(lambda _: setattr(self, 'rgb_count', self.rgb_count + 1))
+        self.depth_sub.registerCallback(lambda _: setattr(self, 'depth_count', self.depth_count + 1))
+
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.rgb_sub, self.depth_sub], queue_size=30, slop=0.2
+            [self.rgb_sub, self.depth_sub], queue_size=50, slop=0.05
         )
         self.ts.registerCallback(self.callback)
         self.frame_count = 0
 
-        self.get_logger().info('Virtual OAK-D Super-Frame Streamer started.')
+        self.get_logger().info('Horizontal OAK-D Super-Frame Streamer started (QoS: Best Effort).')
+        
+        # Diagnostic timer
+        self.timer = self.create_timer(5.0, self.diagnose)
+
+    def diagnose(self):
+        self.get_logger().info(
+            f"DIAGNOSTIC: RGB received: {self.rgb_count}, Depth received: {self.depth_count}, Super-Frames Sent: {self.frame_count}")
+        if self.rgb_count > 0 and self.frame_count == 0:
+            self.get_logger().warn("Receiving raw data but NO Super-Frames! Check timestamp sync.")
 
     def callback(self, rgb_msg, depth_msg):
         self.frame_count += 1
@@ -51,12 +75,12 @@ class CombinedStreamer(Node):
         depth_msb = (depth_mm >> 8).astype(np.uint8)
         depth_lsb = (depth_mm & 0xFF).astype(np.uint8)
         
-        # 4. Replicate to 3 channels (to stay in BGR stream, preserved in Luminance)
+        # 4. Replicate to 3 channels
         depth_msb_bgr = cv2.cvtColor(depth_msb, cv2.COLOR_GRAY2BGR)
         depth_lsb_bgr = cv2.cvtColor(depth_lsb, cv2.COLOR_GRAY2BGR)
         
-        # 5. Vertical Stack: [RGB (800) / MSB (800) / LSB (800)] -> 2400 height
-        super_frame = np.vstack((rgb_frame, depth_msb_bgr, depth_lsb_bgr))
+        # 5. Horizontal Stack: [RGB (1280) | MSB (1280) | LSB (1280)] -> 3840 width
+        super_frame = np.hstack((rgb_frame, depth_msb_bgr, depth_lsb_bgr))
         
         # 6. Publish with the original timestamp
         msg = self.br.cv2_to_imgmsg(super_frame, encoding="bgr8")
