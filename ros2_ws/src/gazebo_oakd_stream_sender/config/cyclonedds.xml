@@ -3,7 +3,7 @@
     <Domain id="any">
         <General>
             <Interfaces>
-                <NetworkInterface name="any"/>
+                <NetworkInterface name="eno1"/>
             </Interfaces>
             <MaxMessageSize>12MB</MaxMessageSize>
             <FragmentSize>1344B</FragmentSize>

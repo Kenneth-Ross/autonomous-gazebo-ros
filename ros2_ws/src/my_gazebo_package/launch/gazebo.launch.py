@@ -12,6 +12,10 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    # CycloneDDS Config for internal communication
+    pkg_sender_share = get_package_share_directory('gazebo_oakd_stream_sender')
+    cyclonedds_config = os.path.join(pkg_sender_share, 'config', 'cyclonedds.xml')
+
     # Set Gazebo resource path
     gz_resource_path = os.path.join(
         get_package_share_directory('my_gazebo_package'), 'models')
@@ -41,6 +45,8 @@ def generate_launch_description():
     initial_track = LaunchConfiguration('initial_track')
 
     return LaunchDescription([
+        SetEnvironmentVariable(name='CYCLONEDDS_URI', value=cyclonedds_config),
+        SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
         declare_initial_track_arg,
         SetEnvironmentVariable(name='GZ_SIM_RESOURCE_PATH', value=gz_resource_path),
         # Launch Gazebo
