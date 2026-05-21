@@ -67,7 +67,12 @@ def generate_launch_description():
                 ('in/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg'),
                 ('out', '~/super_frame_local')
             ],
-            parameters=[{'use_sim_time': use_sim_time}],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                # Standardized QoS Overrides
+                'qos_overrides./oakd/super_frame/image_raw/ffmpeg.subscription.reliability': 'best_effort',
+                'qos_overrides./ffmpeg_decoder/super_frame_local.publisher.reliability': 'best_effort'
+            }],
             output='screen'
         )
 
@@ -83,7 +88,7 @@ def generate_launch_description():
             output='screen'
         )
 
-        # 3. Foxglove Bridge
+        # 3. Foxglove Bridge (Quiet and Robust Configuration)
         foxglove_bridge = Node(
             package='foxglove_bridge',
             executable='foxglove_bridge',
@@ -92,12 +97,17 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'port': 8765,
                 'address': '0.0.0.0',
+                # Ignore services to clean up logs and avoid 'missing service' warnings
+                'service_whitelist': [], 
+                'capabilities': ["clientPublish", "parameters", "parametersSubscribe", "connectionGraph", "assets"],
+                'include_hidden': False,
                 'topic_whitelist': [
                     '^/tf$', '^/tf_static$', 
                     '^/map$', '^/odometry/filtered$',
                     '^/rtabmap/.*', 
                     '^/ground_truth/tf$',
-                    '^/camera/rgb/image_raw/compressed$'
+                    '^/camera/rgb/image_raw/compressed$',
+                    '^/camera/depth/image_raw/compressed$'
                 ]
             }],
             output='screen'
@@ -151,8 +161,8 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
-                'qos_image': 0, # 0 = System Default / Reliable
-                'qos_camera_info': 0,
+                'qos_image': 1, # 1 = SensorData / Best Effort
+                'qos_camera_info': 1,
                 'frame_id': 'base_link',
                 'map_frame_id': 'map',
                 'odom_frame_id': 'odom',
@@ -194,8 +204,8 @@ def generate_launch_description():
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'frame_id': 'base_link',
-                'qos': 0, # 0 = Reliable
-                'qos_camera_info': 0,
+                'qos': 1, # 1 = SensorData / Best Effort
+                'qos_camera_info': 1,
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
                 'approx_sync': True,

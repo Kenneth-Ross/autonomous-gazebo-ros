@@ -5,7 +5,7 @@ from cv_bridge import CvBridge
 import numpy as np
 import message_filters
 import cv2
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 class CombinedStreamer(Node):
     def __init__(self):
@@ -20,16 +20,22 @@ class CombinedStreamer(Node):
         
         self.br = CvBridge()
 
-        # Publisher for the Super-Frame (Local-only)
-        # Using SENSOR_DATA (Best Effort) for high bandwidth over the network
-        pub_qos = QoSProfile(
+        # Standardized Pipeline QoS: Best Effort for high bandwidth over the network
+        # This prevents deadlocks and reduces latency for 10MB frames.
+        self.pipeline_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
-            depth=5
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE
         )
-        self.pub = self.create_publisher(Image, '~/super_frame_local', pub_qos)
 
-        # Synchronized Subscriptions (Using RELIABLE to match Gazebo bridge default)
+        # Publisher for the Super-Frame (Local-only)
+        self.pub = self.create_publisher(Image, '~/super_frame_local', self.pipeline_qos)
+
+        # Synchronized Subscriptions (Using RELIABLE for local Gazebo bridge is fine, 
+        # but we standardize to match the pipeline if needed. 
+        # However, Gazebo bridge is often RELIABLE, so we keep it RELIABLE for incoming data 
+        # to ensure we don't miss raw frames before processing.)
         sub_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
@@ -55,7 +61,7 @@ class CombinedStreamer(Node):
         self.ts.registerCallback(self.callback)
         self.frame_count = 0
 
-        self.get_logger().info('Horizontal OAK-D Super-Frame Streamer started (QoS: Best Effort).')
+        self.get_logger().info('Horizontal OAK-D Super-Frame Streamer started (QoS: Standardized Best Effort).')
         
         # Diagnostic timer
         self.timer = self.create_timer(5.0, self.diagnose)

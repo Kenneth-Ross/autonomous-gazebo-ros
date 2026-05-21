@@ -41,7 +41,10 @@ def generate_launch_description():
                 'ffmpeg.encoder': 'hevc_nvenc', # Default to NVIDIA NVENC
                 'ffmpeg.preset': 'p1',         # Lowest latency for NVENC
                 'ffmpeg.tune': 'ull',          # Ultra-low latency
-                'ffmpeg.bit_rate': 20000000    # 20 Mbps for high fidelity
+                'ffmpeg.bit_rate': 20000000,   # 20 Mbps for high fidelity
+                # Standardized QoS Overrides
+                'qos_overrides./oakd_combined_streamer/super_frame_local.subscription.reliability': 'best_effort',
+                'qos_overrides./oakd/super_frame/image_raw/ffmpeg.publisher.reliability': 'best_effort'
             }],
             output='screen'
         ),
