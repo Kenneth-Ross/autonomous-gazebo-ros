@@ -16,8 +16,10 @@ def generate_launch_description():
     network_interface_arg = DeclareLaunchArgument('network_interface', default_value='', description='Network interface to use for CycloneDDS (e.g., eth0, wlan0)')
 
     def launch_setup(context, *args, **kwargs):
-        # Evaluate launch configurations to raw strings/values
-        use_sim_time = context.launch_configurations.get('use_sim_time', 'true')
+        # Evaluate launch configurations to raw strings
+        use_sim_time_str = context.launch_configurations.get('use_sim_time', 'true').lower()
+        use_sim_time = (use_sim_time_str == 'true')
+        
         iface = context.launch_configurations.get('network_interface', '')
         
         if iface:
