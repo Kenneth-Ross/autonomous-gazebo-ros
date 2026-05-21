@@ -11,8 +11,8 @@
         </General>
         <Discovery>
             <Peers>
-                <!-- Add the Desktop IP for direct discovery -->
-                <Peer address="10.10.11.89"/>
+                <!-- Add the Desktop Ethernet IP for direct discovery -->
+                <Peer address="10.10.12.10"/>
             </Peers>
         </Discovery>
         <Internal>
