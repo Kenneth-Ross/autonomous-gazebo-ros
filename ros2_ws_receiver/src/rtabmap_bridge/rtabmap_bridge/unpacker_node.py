@@ -3,8 +3,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 import numpy as np
-
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 class UnpackerNode(Node):
     def __init__(self):
@@ -15,18 +14,20 @@ class UnpackerNode(Node):
         self.width = 1280
         self.height = 800
         
-        # Publishers for SLAM consumption
-        # Using RELIABLE to ensure data consistency for SLAM
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+        # Standardized Pipeline QoS: Best Effort for high bandwidth over the network
+        # This matches the host publisher and prevents QoS mismatch rejections.
+        self.pipeline_qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
-            depth=10
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE
         )
 
-        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', qos_profile)
-        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', qos_profile)
-        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', qos_profile)
-        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', qos_profile)
+        # Publishers for SLAM consumption
+        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', self.pipeline_qos)
+        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', self.pipeline_qos)
+        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', self.pipeline_qos)
+        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', self.pipeline_qos)
         
         # Static Camera Info (Standard OAK-D 1280x800 calibration)
         self.static_info = CameraInfo()
@@ -44,10 +45,10 @@ class UnpackerNode(Node):
             Image,
             'image_in',
             self.callback,
-            qos_profile
+            self.pipeline_qos
         )
         
-        self.get_logger().info('Horizontal OAK-D Unpacker Node started (QoS: RELIABLE).')
+        self.get_logger().info('Horizontal OAK-D Unpacker Node started (QoS: SENSOR_DATA).')
 
     def callback(self, msg):
         # 1. Convert Super-Frame to OpenCV
