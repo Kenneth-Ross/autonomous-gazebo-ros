@@ -24,25 +24,33 @@ def generate_launch_description():
         
         if iface:
             print(f"[INFO] [rtabmap_slam.launch.py]: Forcing CycloneDDS to interface: {iface} with Peer: 10.10.12.10")
-            uri = f'''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
+            uri = f'''<CycloneDDS xmlns="https://cdds.io/config">
                 <Domain id="any">
                     <General>
-                        <NetworkInterface name="{iface}"/>
-                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <NetworkInterfaceAddress>{iface}</NetworkInterfaceAddress>
+                        <MaxMessageSize>12MB</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
+                        <AllowMulticast>spdp</AllowMulticast>
                     </General>
+                    <Internal>
+                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                    </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
             </CycloneDDS>'''
         else:
             print("[INFO] [rtabmap_slam.launch.py]: CycloneDDS using default auto-detection with Peer: 10.10.12.10")
-            uri = '''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
+            uri = '''<CycloneDDS xmlns="https://cdds.io/config">
                 <Domain id="any">
                     <General>
-                        <NetworkInterface name="any"/>
-                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <NetworkInterfaceAddress>10.10.12.9</NetworkInterfaceAddress>
+                        <MaxMessageSize>12MB</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
+                        <AllowMulticast>spdp</AllowMulticast>
                     </General>
+                    <Internal>
+                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                    </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
             </CycloneDDS>'''

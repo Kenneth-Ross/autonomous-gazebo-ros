@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
+<CycloneDDS xmlns="https://cdds.io/config">
     <Domain id="any">
         <General>
-            <NetworkInterface name="any"/>
-            <MaxMessageSize>10MB</MaxMessageSize>
+            <NetworkInterfaceAddress>10.10.12.10</NetworkInterfaceAddress>
+            <MaxMessageSize>12MB</MaxMessageSize>
             <FragmentSize>1344</FragmentSize>
+            <AllowMulticast>spdp</AllowMulticast>
         </General>
+        <Internal>
+            <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+            <SocketSendBufferSize>10MB</SocketSendBufferSize>
+        </Internal>
         <Discovery>
             <Peers>
                 <Peer address="10.10.12.9"/>
