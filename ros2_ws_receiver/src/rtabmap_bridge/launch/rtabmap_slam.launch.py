@@ -24,10 +24,10 @@ def generate_launch_description():
         
         if iface:
             print(f"[INFO] [rtabmap_slam.launch.py]: Forcing CycloneDDS to interface: {iface} with Peer: 10.10.11.89")
-            uri = f'<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"{iface}\"/></Interfaces><Peers><Peer address=\"10.10.11.89\"/></Peers></General></Domain></CycloneDDS>'
+            uri = f'<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"{iface}\"/></Interfaces></General><Discovery><Peers><Peer address=\"10.10.11.89\"/></Peers></Discovery></Domain></CycloneDDS>'
         else:
             print("[INFO] [rtabmap_slam.launch.py]: CycloneDDS using default auto-detection with Peer: 10.10.11.89")
-            uri = '<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"any\"/></Interfaces><Peers><Peer address=\"10.10.11.89\"/></Peers></General></Domain></CycloneDDS>'
+            uri = '<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"any\"/></Interfaces></General><Discovery><Peers><Peer address=\"10.10.11.89\"/></Peers></Discovery></Domain></CycloneDDS>'
         
         # Define Nodes inside the OpaqueFunction so they pick up the env
         
