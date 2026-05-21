@@ -27,13 +27,13 @@ def generate_launch_description():
             uri = f'''<CycloneDDS xmlns="https://cdds.io/config">
                 <Domain id="any">
                     <General>
-                        <NetworkInterfaceAddress>{iface}</NetworkInterfaceAddress>
+                        <Interfaces><NetworkInterface name="{iface}"/></Interfaces>
                         <MaxMessageSize>12MB</MaxMessageSize>
-                        <FragmentSize>1344</FragmentSize>
+                        <FragmentSize>1344B</FragmentSize>
                         <AllowMulticast>spdp</AllowMulticast>
                     </General>
                     <Internal>
-                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                        <SocketReceiveBufferSize min="10MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
@@ -43,13 +43,13 @@ def generate_launch_description():
             uri = '''<CycloneDDS xmlns="https://cdds.io/config">
                 <Domain id="any">
                     <General>
-                        <NetworkInterfaceAddress>10.10.12.9</NetworkInterfaceAddress>
+                        <Interfaces><NetworkInterface name="any"/></Interfaces>
                         <MaxMessageSize>12MB</MaxMessageSize>
-                        <FragmentSize>1344</FragmentSize>
+                        <FragmentSize>1344B</FragmentSize>
                         <AllowMulticast>spdp</AllowMulticast>
                     </General>
                     <Internal>
-                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                        <SocketReceiveBufferSize min="10MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
