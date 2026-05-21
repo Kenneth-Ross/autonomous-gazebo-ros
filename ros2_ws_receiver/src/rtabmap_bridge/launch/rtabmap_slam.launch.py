@@ -28,13 +28,12 @@ def generate_launch_description():
                 <Domain id="any">
                     <General>
                         <Interfaces><NetworkInterface name="{iface}"/></Interfaces>
-                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <MaxMessageSize>10485760</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
                     </General>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                     <Internal>
-                        <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
-                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                        <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
                     </Internal>
                 </Domain>
             </CycloneDDS>'''
@@ -44,13 +43,12 @@ def generate_launch_description():
                 <Domain id="any">
                     <General>
                         <Interfaces><NetworkInterface name="any"/></Interfaces>
-                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <MaxMessageSize>10485760</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
                     </General>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                     <Internal>
-                        <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
-                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                        <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
                     </Internal>
                 </Domain>
             </CycloneDDS>'''
