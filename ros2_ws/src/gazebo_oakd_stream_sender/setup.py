@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'gazebo_oakd_stream_sender'
 
@@ -10,25 +12,18 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/stream_to_remote.launch.py']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.xml')),
     ],
-    install_requires=['setuptools', 'opencv-python', 'PyGObject', 'numpy'],
+    install_requires=['setuptools'],
     zip_safe=True,
     maintainer='k-dev',
     maintainer_email='kennethsross20@gmail.com',
     description='TODO: Package description',
     license='MIT',
-    extras_require={
-        'test': [
-            'pytest',
-        ],
-    },
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'rgb_image_subscriber = gazebo_oakd_stream_sender.rgb_image_subscriber:main',
-            'depth_image_subscriber = gazebo_oakd_stream_sender.depth_image_subscriber:main',
-            'left_image_subscriber = gazebo_oakd_stream_sender.left_image_subscriber:main',
-            'right_image_subscriber = gazebo_oakd_stream_sender.right_image_subscriber:main',
             'combined_streamer = gazebo_oakd_stream_sender.combined_streamer:main',
         ],
     },
