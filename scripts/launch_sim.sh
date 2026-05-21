@@ -24,14 +24,15 @@ else
 fi
 
 # 3. Handle Arguments
-# Usage: ./launch_sim.sh [track_name]
+# Usage: ./launch_sim.sh [track_name] [headless_true_false]
 # Track names: oval, figure_eight, hairpin, slalom, rectangle, random (default)
 TRACK_NAME=${1:-"random"}
+HEADLESS=${2:-"false"}
 
 echo "------------------------------------------------"
 echo "Launching ROS2 Gazebo Simulation"
-echo "Network: Localhost Only"
 echo "Initial Track: $TRACK_NAME"
+echo "Headless Mode: $HEADLESS"
 echo "------------------------------------------------"
 
 # 4. Cleanup old processes (Optional but recommended)
@@ -39,4 +40,4 @@ pkill -9 -f "gz sim" || true
 pkill -9 -f "ros2" || true
 
 # 5. Launch
-ros2 launch $PACKAGE_NAME $LAUNCH_FILE initial_track:=$TRACK_NAME
+ros2 launch $PACKAGE_NAME $LAUNCH_FILE initial_track:=$TRACK_NAME headless:=$HEADLESS
