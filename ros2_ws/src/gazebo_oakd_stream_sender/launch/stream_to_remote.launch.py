@@ -1,8 +1,17 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import SetEnvironmentVariable
 
 def generate_launch_description():
+    pkg_share = get_package_share_directory('gazebo_oakd_stream_sender')
+    cyclonedds_config = os.path.join(pkg_share, 'config', 'cyclonedds.xml')
+
     return LaunchDescription([
+        SetEnvironmentVariable(name='CYCLONEDDS_URI', value=cyclonedds_config),
+        SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
+        
         # 1. The Virtual OAK-D Super-Frame Streamer
         # This node stacks RGB and Depth (MSB/LSB) into a 1280x2400 frame
         Node(

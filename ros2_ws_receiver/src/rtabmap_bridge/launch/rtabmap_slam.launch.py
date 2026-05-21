@@ -24,10 +24,36 @@ def generate_launch_description():
         
         if iface:
             print(f"[INFO] [rtabmap_slam.launch.py]: Forcing CycloneDDS to interface: {iface} with Peer: 10.10.12.10")
-            uri = f'<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"{iface}\"/></Interfaces></General><Discovery><Peers><Peer address=\"10.10.12.10\"/></Peers></Discovery></Domain></CycloneDDS>'
+            uri = f'''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
+                <Domain id="any">
+                    <General>
+                        <Interfaces><NetworkInterface name="{iface}"/></Interfaces>
+                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <FragmentSize>1344</FragmentSize>
+                    </General>
+                    <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
+                    <Internal>
+                        <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
+                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                    </Internal>
+                </Domain>
+            </CycloneDDS>'''
         else:
             print("[INFO] [rtabmap_slam.launch.py]: CycloneDDS using default auto-detection with Peer: 10.10.12.10")
-            uri = '<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds"><Domain id="any"><General><Interfaces><NetworkInterface name=\"any\"/></Interfaces></General><Discovery><Peers><Peer address=\"10.10.12.10\"/></Peers></Discovery></Domain></CycloneDDS>'
+            uri = '''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
+                <Domain id="any">
+                    <General>
+                        <Interfaces><NetworkInterface name="any"/></Interfaces>
+                        <MaxMessageSize>10MB</MaxMessageSize>
+                        <FragmentSize>1344</FragmentSize>
+                    </General>
+                    <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
+                    <Internal>
+                        <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
+                        <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
+                    </Internal>
+                </Domain>
+            </CycloneDDS>'''
         
         # Define Nodes inside the OpaqueFunction so they pick up the env
         
@@ -130,7 +156,9 @@ def generate_launch_description():
                 'odom_frame_id': 'odom',
                 'publish_tf': True,
                 'approx_sync': True,
-                'queue_size': 30,
+                'approx_sync_max_interval': 0.1,
+                'queue_size': 50,
+                'sync_queue_size': 50,
                 'Vis/MaxFeatures': '600',
                 'Mem/IncrementalMemory': 'true',
                 'RGBD/LinearUpdate': '0.1',
@@ -166,7 +194,9 @@ def generate_launch_description():
                 'frame_id': 'base_link',
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
-                'approx_sync': True
+                'approx_sync': True,
+                'approx_sync_max_interval': 0.1,
+                'queue_size': 50
             }],
             remappings=[
                 ('rgb/image', '/camera/rgb/image_raw'),
