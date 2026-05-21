@@ -2,6 +2,8 @@
 
 This project is a hybrid ROS 2 system designed for high-performance robotics simulation and edge offloading. It utilizes **ROS 2 Jazzy Jalisco** on **Ubuntu 24.04**.
 
+you are on the server. DO NOT  attempt to run commands intended for the orange pi. The user needs to execute them for you.
+
 ## Architecture Overview
 - **Gazebo Host (`ros2_ws/`):** Runs Gazebo Harmonic, robot controllers, and the **Virtual OAK-D Super-Frame Sender**.
 - **Edge Receiver (`ros2_ws_receiver/`):** Runs on hardware (e.g., Orange Pi 5) for **VPU-accelerated decoding** (`hevc_rkmpp`), Depth Unpacking, and RTAB-Map SLAM.
