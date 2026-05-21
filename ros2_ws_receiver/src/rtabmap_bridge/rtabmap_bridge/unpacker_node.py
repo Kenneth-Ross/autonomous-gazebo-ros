@@ -4,6 +4,8 @@ from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 import numpy as np
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
 class UnpackerNode(Node):
     def __init__(self):
         super().__init__('unpacker_node')
@@ -14,10 +16,17 @@ class UnpackerNode(Node):
         self.height = 800
         
         # Publishers for SLAM consumption
-        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', 10)
-        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', 10)
-        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', 10)
-        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', 10)
+        # Using SENSOR_DATA (Best Effort) for consistency
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5
+        )
+
+        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', qos_profile)
+        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', qos_profile)
+        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', qos_profile)
+        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', qos_profile)
         
         # Static Camera Info (Standard OAK-D 1280x800 calibration)
         self.static_info = CameraInfo()
@@ -35,10 +44,10 @@ class UnpackerNode(Node):
             Image,
             'image_in',
             self.callback,
-            10
+            qos_profile
         )
         
-        self.get_logger().info('Virtual OAK-D Unpacker Node started.')
+        self.get_logger().info('Horizontal OAK-D Unpacker Node started (QoS: Best Effort).')
 
     def callback(self, msg):
         # 1. Convert Super-Frame to OpenCV
@@ -48,14 +57,14 @@ class UnpackerNode(Node):
             self.get_logger().error(f"Failed to convert image: {str(e)}")
             return
             
-        if combined_frame.shape[0] != self.height * 3:
-            self.get_logger().error(f"Unexpected Super-Frame height: {combined_frame.shape[0]}")
+        if combined_frame.shape[1] != self.width * 3:
+            self.get_logger().error(f"Unexpected Super-Frame width: {combined_frame.shape[1]}")
             return
 
-        # 2. Slice Vertically [Top: RGB | Mid: MSB | Bot: LSB]
-        rgb_frame = combined_frame[0:self.height, :, :]
-        msb_frame = combined_frame[self.height:2*self.height, :, 0] 
-        lsb_frame = combined_frame[2*self.height:3*self.height, :, 0]
+        # 2. Slice Horizontally [Left: RGB | Mid: MSB | Right: LSB]
+        rgb_frame = combined_frame[:, 0:self.width, :]
+        msb_frame = combined_frame[:, self.width:2*self.width, 0] 
+        lsb_frame = combined_frame[:, 2*self.width:3*self.width, 0]
         
         # 3. Reconstruct 16-bit Depth (mm)
         depth_16bit = (msb_frame.astype(np.uint16) << 8) | lsb_frame.astype(np.uint16)
