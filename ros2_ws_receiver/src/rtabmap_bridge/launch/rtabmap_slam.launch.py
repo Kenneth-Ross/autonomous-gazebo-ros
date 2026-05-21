@@ -27,14 +27,11 @@ def generate_launch_description():
             uri = f'''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
                 <Domain id="any">
                     <General>
-                        <Interfaces><NetworkInterface name="{iface}"/></Interfaces>
-                        <MaxMessageSize>10485760</MaxMessageSize>
+                        <NetworkInterface name="{iface}"/>
+                        <MaxMessageSize>10MB</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
                     </General>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
-                    <Internal>
-                        <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
-                    </Internal>
                 </Domain>
             </CycloneDDS>'''
         else:
@@ -42,14 +39,11 @@ def generate_launch_description():
             uri = '''<CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
                 <Domain id="any">
                     <General>
-                        <Interfaces><NetworkInterface name="any"/></Interfaces>
-                        <MaxMessageSize>10485760</MaxMessageSize>
+                        <NetworkInterface name="any"/>
+                        <MaxMessageSize>10MB</MaxMessageSize>
                         <FragmentSize>1344</FragmentSize>
                     </General>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
-                    <Internal>
-                        <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
-                    </Internal>
                 </Domain>
             </CycloneDDS>'''
         

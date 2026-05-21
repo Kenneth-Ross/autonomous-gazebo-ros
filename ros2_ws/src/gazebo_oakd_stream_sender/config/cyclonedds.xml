@@ -2,11 +2,8 @@
 <CycloneDDS xmlns="https://cyclonedds.org/schema/cyclonedds">
     <Domain id="any">
         <General>
-            <Interfaces>
-                <NetworkInterface name="any"/>
-            </Interfaces>
-            <AllowMulticast>default</AllowMulticast>
-            <MaxMessageSize>10485760</MaxMessageSize>
+            <NetworkInterface name="any"/>
+            <MaxMessageSize>10MB</MaxMessageSize>
             <FragmentSize>1344</FragmentSize>
         </General>
         <Discovery>
@@ -14,8 +11,5 @@
                 <Peer address="10.10.12.9"/>
             </Peers>
         </Discovery>
-        <Internal>
-            <SocketReceiveBufferSize>10485760</SocketReceiveBufferSize>
-        </Internal>
     </Domain>
 </CycloneDDS>
