@@ -35,14 +35,17 @@ class CombinedStreamer(Node):
         self.depth_sub = message_filters.Subscriber(
             self, Image, '/oakd/depth/image_raw', qos_profile=qos_profile)
         
-        # Diagnostic counters to see if we're even receiving raw data
+        # Standard Subscribers JUST for diagnostics (to ensure we see topics regardless of filters)
+        self.rgb_diag_sub = self.create_subscription(
+            Image, '/oakd/rgb/image_raw', self.rgb_diag_cb, qos_profile)
+        self.depth_diag_sub = self.create_subscription(
+            Image, '/oakd/depth/image_raw', self.depth_diag_cb, qos_profile)
+
         self.rgb_count = 0
         self.depth_count = 0
-        self.rgb_sub.registerCallback(lambda _: setattr(self, 'rgb_count', self.rgb_count + 1))
-        self.depth_sub.registerCallback(lambda _: setattr(self, 'depth_count', self.depth_count + 1))
 
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.rgb_sub, self.depth_sub], queue_size=50, slop=0.05
+            [self.rgb_sub, self.depth_sub], queue_size=100, slop=0.1
         )
         self.ts.registerCallback(self.callback)
         self.frame_count = 0
@@ -52,11 +55,19 @@ class CombinedStreamer(Node):
         # Diagnostic timer
         self.timer = self.create_timer(5.0, self.diagnose)
 
+    def rgb_diag_cb(self, msg):
+        self.rgb_count += 1
+
+    def depth_diag_cb(self, msg):
+        self.depth_count += 1
+
     def diagnose(self):
         self.get_logger().info(
             f"DIAGNOSTIC: RGB received: {self.rgb_count}, Depth received: {self.depth_count}, Super-Frames Sent: {self.frame_count}")
-        if self.rgb_count > 0 and self.frame_count == 0:
-            self.get_logger().warn("Receiving raw data but NO Super-Frames! Check timestamp sync.")
+        if (self.rgb_count > 0 or self.depth_count > 0) and self.frame_count == 0:
+            self.get_logger().warn("Receiving raw data but NO Super-Frames! Timestamps are likely NOT syncing.")
+        if self.rgb_count == 0 and self.depth_count == 0:
+            self.get_logger().error("NO DATA received from Gazebo! Check 'ros2 topic list' and bridge.")
 
     def callback(self, rgb_msg, depth_msg):
         self.frame_count += 1
