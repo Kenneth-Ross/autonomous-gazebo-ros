@@ -21,25 +21,30 @@ class CombinedStreamer(Node):
         self.br = CvBridge()
 
         # Publisher for the Super-Frame (Local-only)
-        # Using SENSOR_DATA (Best Effort) for high bandwidth
-        qos_profile = QoSProfile(
+        # Using SENSOR_DATA (Best Effort) for high bandwidth over the network
+        pub_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=5
         )
-        self.pub = self.create_publisher(Image, '~/super_frame_local', qos_profile)
+        self.pub = self.create_publisher(Image, '~/super_frame_local', pub_qos)
 
-        # Synchronized Subscriptions (Using Best Effort to match Gazebo bridge)
+        # Synchronized Subscriptions (Using RELIABLE to match Gazebo bridge default)
+        sub_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
         self.rgb_sub = message_filters.Subscriber(
-            self, Image, '/oakd/rgb/image_raw', qos_profile=qos_profile)
+            self, Image, '/oakd/rgb/image_raw', qos_profile=sub_qos)
         self.depth_sub = message_filters.Subscriber(
-            self, Image, '/oakd/depth/image_raw', qos_profile=qos_profile)
+            self, Image, '/oakd/depth/image_raw', qos_profile=sub_qos)
         
-        # Standard Subscribers JUST for diagnostics (to ensure we see topics regardless of filters)
+        # Standard Subscribers JUST for diagnostics
         self.rgb_diag_sub = self.create_subscription(
-            Image, '/oakd/rgb/image_raw', self.rgb_diag_cb, qos_profile)
+            Image, '/oakd/rgb/image_raw', self.rgb_diag_cb, sub_qos)
         self.depth_diag_sub = self.create_subscription(
-            Image, '/oakd/depth/image_raw', self.depth_diag_cb, qos_profile)
+            Image, '/oakd/depth/image_raw', self.depth_diag_cb, sub_qos)
 
         self.rgb_count = 0
         self.depth_count = 0
