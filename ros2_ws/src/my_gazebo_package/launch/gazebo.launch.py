@@ -42,17 +42,31 @@ def generate_launch_description():
         description='Initial track layout to spawn (oval, figure_eight, hairpin, slalom, rectangle, random)'
     )
 
+    declare_headless_arg = DeclareLaunchArgument(
+        'headless',
+        default_value='false',
+        description='Run Gazebo in server-only mode (headless)'
+    )
+
     initial_track = LaunchConfiguration('initial_track')
+    headless = LaunchConfiguration('headless')
+
+    # Gazebo args logic: -r for GUI, -s for Server-only
+    gz_args = PythonExpression([
+        "'-s ' if '", headless, "' == 'true' else '-r '",
+        " + '", world_file, "'"
+    ])
 
     return LaunchDescription([
         SetEnvironmentVariable(name='CYCLONEDDS_URI', value=cyclonedds_config),
         SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
         declare_initial_track_arg,
+        declare_headless_arg,
         SetEnvironmentVariable(name='GZ_SIM_RESOURCE_PATH', value=gz_resource_path),
         # Launch Gazebo
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gz_sim_launch_file),
-            launch_arguments={'gz_args': f'-r {world_file}'}.items(),
+            launch_arguments={'gz_args': gz_args}.items(),
         ),
 
         # Spawn the robot
