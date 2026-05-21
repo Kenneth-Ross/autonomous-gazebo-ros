@@ -16,11 +16,11 @@ class UnpackerNode(Node):
         self.height = 800
         
         # Publishers for SLAM consumption
-        # Using SENSOR_DATA (Best Effort) for consistency
+        # Using RELIABLE to ensure data consistency for SLAM
         qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
-            depth=5
+            depth=10
         )
 
         self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', qos_profile)
@@ -47,7 +47,7 @@ class UnpackerNode(Node):
             qos_profile
         )
         
-        self.get_logger().info('Horizontal OAK-D Unpacker Node started (QoS: Best Effort).')
+        self.get_logger().info('Horizontal OAK-D Unpacker Node started (QoS: RELIABLE).')
 
     def callback(self, msg):
         # 1. Convert Super-Frame to OpenCV

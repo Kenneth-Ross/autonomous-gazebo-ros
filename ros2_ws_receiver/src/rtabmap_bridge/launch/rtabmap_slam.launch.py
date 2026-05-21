@@ -151,8 +151,8 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
-                'qos_image': 1, # 1 = Best Effort (SENSOR_DATA)
-                'qos_camera_info': 1,
+                'qos_image': 0, # 0 = System Default / Reliable
+                'qos_camera_info': 0,
                 'frame_id': 'base_link',
                 'map_frame_id': 'map',
                 'odom_frame_id': 'odom',
@@ -194,8 +194,8 @@ def generate_launch_description():
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'frame_id': 'base_link',
-                'qos': 1, # 1 = Best Effort (SENSOR_DATA)
-                'qos_camera_info': 1,
+                'qos': 0, # 0 = Reliable
+                'qos_camera_info': 0,
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
                 'approx_sync': True,
