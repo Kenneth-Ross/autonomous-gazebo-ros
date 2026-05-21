@@ -5,14 +5,16 @@
             <Interfaces>
                 <NetworkInterface name="wlan0"/>
             </Interfaces>
-            <Peers>
-                <!-- Add the Desktop IP for direct discovery -->
-                <Peer address="10.10.11.89"/>
-            </Peers>
             <AllowMulticast>default</AllowMulticast>
             <MaxMessageSize>10MB</MaxMessageSize>
             <FragmentSize>1344</FragmentSize>
         </General>
+        <Discovery>
+            <Peers>
+                <!-- Add the Desktop IP for direct discovery -->
+                <Peer address="10.10.11.89"/>
+            </Peers>
+        </Discovery>
         <Internal>
             <MinimumSocketReceiveBufferSize>10MB</MinimumSocketReceiveBufferSize>
             <SocketReceiveBufferSize>10MB</SocketReceiveBufferSize>
