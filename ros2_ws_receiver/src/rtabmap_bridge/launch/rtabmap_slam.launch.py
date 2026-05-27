@@ -117,8 +117,11 @@ def generate_launch_description():
                     '^/map$', '^/odometry/filtered$',
                     '^/rtabmap/.*', 
                     '^/ground_truth/tf$',
+                    '^/camera/rgb/image_raw$',
+                    '^/camera/depth/image_raw$',
                     '^/camera/rgb/image_raw/compressed$',
-                    '^/camera/depth/image_raw/compressed$'
+                    '^/camera/depth/image_raw/compressed$',
+                    '^/yolo/detections$'
                 ]
             }],
             output='screen'
