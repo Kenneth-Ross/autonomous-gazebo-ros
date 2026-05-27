@@ -20,6 +20,18 @@ def generate_launch_description():
         use_sim_time_str = context.launch_configurations.get('use_sim_time', 'true').lower()
         use_sim_time = (use_sim_time_str == 'true')
         
+        # Dynamically resolve model path to support different user environments (e.g., host k-dev vs edge opi)
+        home_dir = os.path.expanduser('~')
+        model_paths = [
+            os.path.join(home_dir, 'dev/ros2_gazebo/yolo11n_416_qat_int8_fp16out.rknn'),
+            os.path.join(home_dir, 'dev/autonomous-gazebo-ros/yolo11n_416_qat_int8_fp16out.rknn')
+        ]
+        resolved_model_path = model_paths[0]
+        for path in model_paths:
+            if os.path.exists(path):
+                resolved_model_path = path
+                break
+        
         iface = context.launch_configurations.get('network_interface', '')
         
         if iface:
@@ -161,8 +173,8 @@ def generate_launch_description():
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
                 'subscribe_landmark_detections': True,
-                'qos_image': 1, # 1 = SensorData / Best Effort
-                'qos_camera_info': 1,
+                'qos_image': 2, # 2 = SensorData / Best Effort in ROS 2 rtabmap_ros
+                'qos_camera_info': 2,
                 'frame_id': 'base_link',
                 'map_frame_id': 'map',
                 'odom_frame_id': 'odom',
@@ -205,8 +217,8 @@ def generate_launch_description():
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'frame_id': 'base_link',
-                'qos': 1, # 1 = SensorData / Best Effort
-                'qos_camera_info': 1,
+                'qos': 2, # 2 = SensorData / Best Effort in ROS 2 rtabmap_ros
+                'qos_camera_info': 2,
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
                 'approx_sync': True,
@@ -228,7 +240,7 @@ def generate_launch_description():
             name='cone_detector_npu',
             parameters=[{
                 'use_sim_time': use_sim_time,
-                'model_path': '/home/k-dev/dev/ros2_gazebo/yolo11n_416_qat_int8_fp16out.rknn',
+                'model_path': resolved_model_path,
                 'conf_threshold': 0.5,
                 'nms_threshold': 0.4
             }],
