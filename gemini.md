@@ -2,7 +2,15 @@
 
 This project is a hybrid ROS 2 system designed for high-performance robotics simulation and edge offloading. It utilizes **ROS 2 Jazzy Jalisco** on **Ubuntu 24.04**.
 
-you are on the server. DO NOT  attempt to run commands intended for the orange pi. The user needs to execute them for you.
+> [!IMPORTANT]
+> **Operating Environment Memory:**
+> Antigravity is operating in the **server environment**, not the Orange Pi (edge device). This means Antigravity cannot directly execute commands or check packages/dependencies on the `ws_receiver` side. For any edge-side verification, building, package checks, or runtime execution, Antigravity must provide explicit instructions for the user to run on the Orange Pi.
+>
+> **Documentation Strategy Memory:**
+> Antigravity must document all architectural changes, code additions, and implementation challenges using the `documenter` subagent (defined in `.agents/agents/documenter.md`). The `documenter` should be invoked to update project docs, plans, and walkthroughs, ensuring they adhere to documentation lifecycles (planned/deprecated/finished) and Mermaid syntax guidelines.
+>
+> **Remote Repository Sync Memory:**
+> Any source code changes intended for the edge device (Orange Pi) must be committed and pushed to the remote repository so the user can easily pull them down onto the hardware.
 
 ## Architecture Overview
 - **Gazebo Host (`ros2_ws/`):** Runs Gazebo Harmonic, robot controllers, and the **Virtual OAK-D Super-Frame Sender**.

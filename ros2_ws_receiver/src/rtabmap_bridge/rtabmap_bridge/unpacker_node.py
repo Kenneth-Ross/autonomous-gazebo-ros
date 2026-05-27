@@ -58,14 +58,14 @@ class UnpackerNode(Node):
             self.get_logger().error(f"Failed to convert image: {str(e)}")
             return
             
-        if combined_frame.shape[1] != self.width * 3:
-            self.get_logger().error(f"Unexpected Super-Frame width: {combined_frame.shape[1]}")
+        if combined_frame.shape[0] != self.height * 3:
+            self.get_logger().error(f"Unexpected Super-Frame height: {combined_frame.shape[0]}")
             return
 
-        # 2. Slice Horizontally [Left: RGB | Mid: MSB | Right: LSB]
-        rgb_frame = combined_frame[:, 0:self.width, :]
-        msb_frame = combined_frame[:, self.width:2*self.width, 0] 
-        lsb_frame = combined_frame[:, 2*self.width:3*self.width, 0]
+        # 2. Slice Vertically [Top: RGB | Mid: MSB | Bottom: LSB]
+        rgb_frame = combined_frame[0:self.height, :, :]
+        msb_frame = combined_frame[self.height:2*self.height, :, 0] 
+        lsb_frame = combined_frame[2*self.height:3*self.height, :, 0]
         
         # 3. Reconstruct 16-bit Depth (mm)
         depth_16bit = (msb_frame.astype(np.uint16) << 8) | lsb_frame.astype(np.uint16)

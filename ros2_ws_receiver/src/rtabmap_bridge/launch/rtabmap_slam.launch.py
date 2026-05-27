@@ -161,6 +161,7 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
+                'subscribe_landmark_detections': True,
                 'qos_image': 1, # 1 = SensorData / Best Effort
                 'qos_camera_info': 1,
                 'frame_id': 'base_link',
@@ -190,7 +191,8 @@ def generate_launch_description():
                 ('depth/image', '/camera/depth/image_raw'),
                 ('rgb/camera_info', '/camera/rgb/camera_info'),
                 ('depth/camera_info', '/camera/depth/camera_info'),
-                ('odom', '/odometry/filtered')
+                ('odom', '/odometry/filtered'),
+                ('landmarks', '/rtabmap/landmarks')
             ],
             arguments=['-d']
         )
@@ -220,6 +222,29 @@ def generate_launch_description():
             ]
         )
 
+        # 9. NPU Detector Node (runs on Orange Pi 5 NPU)
+        npu_detector_node = Node(
+            package='rtabmap_bridge',
+            executable='cone_detector_npu',
+            name='cone_detector_npu',
+            parameters=[{
+                'use_sim_time': use_sim_time,
+                'model_path': '/home/k-dev/dev/ros2_gazebo/yolo11n_416_qat_int8_fp16out.rknn',
+                'conf_threshold': 0.5,
+                'nms_threshold': 0.4
+            }],
+            output='screen'
+        )
+
+        # 10. Cone Landmark Processor Node
+        landmark_processor_node = Node(
+            package='rtabmap_bridge',
+            executable='cone_landmark_processor',
+            name='cone_landmark_processor',
+            parameters=[{'use_sim_time': use_sim_time}],
+            output='screen'
+        )
+
         return [
             SetEnvironmentVariable(name='CYCLONEDDS_URI', value=uri),
             SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
@@ -231,7 +256,9 @@ def generate_launch_description():
             static_tf_camera,
             ekf_node,
             rtabmap_node,
-            rgbd_odometry_node
+            rgbd_odometry_node,
+            npu_detector_node,
+            landmark_processor_node
         ]
 
     return LaunchDescription([

@@ -25,7 +25,8 @@ setup(
             'bridge_node = rtabmap_bridge.bridge_node:main',
             'unpacker_node = rtabmap_bridge.unpacker_node:main',
             'ground_truth_broadcaster = rtabmap_bridge.ground_truth_broadcaster:main',
-            'cone_landmark_processor = rtabmap_bridge.cone_landmark_processor:main'
+            'cone_landmark_processor = rtabmap_bridge.cone_landmark_processor:main',
+            'cone_detector_npu = rtabmap_bridge.cone_detector_npu:main'
         ],
     },
 )
