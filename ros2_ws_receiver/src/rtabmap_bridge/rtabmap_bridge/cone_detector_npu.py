@@ -45,9 +45,9 @@ class ConeDetectorNPUNode(Node):
                     self.get_logger().error("Failed to load RKNN model.")
                     self.rknn = None
                 else:
-                    # Attempt to initialize runtime on RK3588 NPU
+                    # Attempt to initialize runtime on local RK3588 NPU (rknnlite does not support target parameter)
                     try:
-                        ret = self.rknn.init_runtime(target='rk3588')
+                        ret = self.rknn.init_runtime()
                         if ret == 0:
                             self.get_logger().info("RKNN runtime initialized successfully on RK3588 NPU.")
                         else:

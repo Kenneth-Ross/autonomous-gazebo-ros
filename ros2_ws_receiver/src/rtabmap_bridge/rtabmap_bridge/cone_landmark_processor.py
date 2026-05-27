@@ -27,21 +27,21 @@ class ConeLandmarkProcessor(Node):
         self.next_landmark_id = 1
         self.association_threshold = 1.0 # meters
         
-        # Subscribe to CameraInfo dynamically
-        self.camera_info = None
-        self.info_sub = self.create_subscription(
-            CameraInfo,
-            '/camera/depth/camera_info',
-            self.info_callback,
-            10
-        )
-        
         # Standardized Pipeline QoS (Best Effort) for high bandwidth depth stream
         pipeline_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
             depth=10,
             durability=DurabilityPolicy.VOLATILE
+        )
+        
+        # Subscribe to CameraInfo dynamically
+        self.camera_info = None
+        self.info_sub = self.create_subscription(
+            CameraInfo,
+            '/camera/depth/camera_info',
+            self.info_callback,
+            pipeline_qos
         )
         
         # Subscribe to Depth and YOLO Detections using message_filters
