@@ -2,10 +2,7 @@
 <CycloneDDS xmlns="https://cdds.io/config">
     <Domain id="any">
         <General>
-            <Interfaces>
-                <!-- Binding to 'any' is safer on the Pi as interfaces can rename (enP4p65s0 vs eth0) -->
-                <NetworkInterface name="any"/>
-            </Interfaces>
+
             <MaxMessageSize>12MB</MaxMessageSize>
             <FragmentSize>1344B</FragmentSize>
             <AllowMulticast>spdp</AllowMulticast>
