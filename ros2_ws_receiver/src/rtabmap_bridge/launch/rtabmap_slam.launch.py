@@ -97,8 +97,8 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'port': 8765,
                 'address': '0.0.0.0',
-                # Ignore services to clean up logs and avoid 'missing service' warnings
-                'service_whitelist': [], 
+                # Block all services with a non-matching regex to prevent type-inference crashes in ROS 2 Jazzy
+                'service_whitelist': ['(?!)'], 
                 'capabilities': ["clientPublish", "parameters", "parametersSubscribe", "connectionGraph", "assets"],
                 'include_hidden': False,
                 'topic_whitelist': [
