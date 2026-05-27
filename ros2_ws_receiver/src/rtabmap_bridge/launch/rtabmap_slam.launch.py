@@ -192,7 +192,7 @@ def generate_launch_description():
                 ('rgb/camera_info', '/camera/rgb/camera_info'),
                 ('depth/camera_info', '/camera/depth/camera_info'),
                 ('odom', '/odometry/filtered'),
-                ('landmarks', '/rtabmap/landmarks')
+                ('landmark_detections', '/rtabmap/landmark_detections')
             ],
             arguments=['-d']
         )

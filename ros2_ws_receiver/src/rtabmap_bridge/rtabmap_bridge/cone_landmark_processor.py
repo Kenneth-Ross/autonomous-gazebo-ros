@@ -59,7 +59,7 @@ class ConeLandmarkProcessor(Node):
         self.ts.registerCallback(self.callback)
         
         # Publisher for RTAB-Map Landmarks
-        self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmarks', 10)
+        self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmark_detections', 10)
         self.get_logger().info("Cone Landmark Processor (Robust) initialized.")
 
     def info_callback(self, msg):
