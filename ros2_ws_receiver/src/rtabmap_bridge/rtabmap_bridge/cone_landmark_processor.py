@@ -39,14 +39,14 @@ class ConeLandmarkProcessor(Node):
         self.camera_info = None
         self.info_sub = self.create_subscription(
             CameraInfo,
-            '/camera/depth/camera_info',
+            '/edge/camera/depth/camera_info',
             self.info_callback,
             pipeline_qos
         )
         
         # Subscribe to Depth and YOLO Detections using message_filters
         self.depth_sub = message_filters.Subscriber(
-            self, Image, '/camera/depth/image_raw', qos_profile=pipeline_qos
+            self, Image, '/edge/camera/depth/image_raw', qos_profile=pipeline_qos
         )
         self.yolo_sub = message_filters.Subscriber(
             self, Detection2DArray, '/yolo/detections', qos_profile=10

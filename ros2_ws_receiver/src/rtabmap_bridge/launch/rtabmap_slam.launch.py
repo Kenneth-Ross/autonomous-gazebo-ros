@@ -119,10 +119,10 @@ def generate_launch_description():
                     '^/map$', '^/odometry/filtered$',
                     '^/rtabmap/.*', 
                     '^/ground_truth/tf$',
-                    '^/camera/rgb/image_raw$',
-                    '^/camera/depth/image_raw$',
-                    '^/camera/rgb/image_raw/compressed$',
-                    '^/camera/depth/image_raw/compressed$',
+                    '^/edge/camera/rgb/image_raw$',
+                    '^/edge/camera/depth/image_raw$',
+                    '^/edge/camera/rgb/image_raw/compressed$',
+                    '^/edge/camera/depth/image_raw/compressed$',
                     '^/yolo/detections$'
                 ]
             }],
@@ -203,10 +203,10 @@ def generate_launch_description():
                 'wait_for_transform': 0.5
             }],
             remappings=[
-                ('rgb/image', '/camera/rgb/image_raw'),
-                ('depth/image', '/camera/depth/image_raw'),
-                ('rgb/camera_info', '/camera/rgb/camera_info'),
-                ('depth/camera_info', '/camera/depth/camera_info'),
+                ('rgb/image', '/edge/camera/rgb/image_raw'),
+                ('depth/image', '/edge/camera/depth/image_raw'),
+                ('rgb/camera_info', '/edge/camera/rgb/camera_info'),
+                ('depth/camera_info', '/edge/camera/depth/camera_info'),
                 ('odom', '/odometry/filtered'),
                 ('landmark_detections', '/rtabmap/landmark_detections')
             ],
@@ -231,10 +231,10 @@ def generate_launch_description():
                 'queue_size': 50
             }],
             remappings=[
-                ('rgb/image', '/camera/rgb/image_raw'),
-                ('depth/image', '/camera/depth/image_raw'),
-                ('rgb/camera_info', '/camera/rgb/camera_info'),
-                ('depth/camera_info', '/camera/depth/camera_info')
+                ('rgb/image', '/edge/camera/rgb/image_raw'),
+                ('depth/image', '/edge/camera/depth/image_raw'),
+                ('rgb/camera_info', '/edge/camera/rgb/camera_info'),
+                ('depth/camera_info', '/edge/camera/depth/camera_info')
             ]
         )
 

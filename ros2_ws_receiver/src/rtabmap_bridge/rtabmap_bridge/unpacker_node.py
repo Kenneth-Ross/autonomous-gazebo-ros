@@ -24,10 +24,10 @@ class UnpackerNode(Node):
         )
 
         # Publishers for SLAM consumption
-        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', self.pipeline_qos)
-        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', self.pipeline_qos)
-        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', self.pipeline_qos)
-        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', self.pipeline_qos)
+        self.rgb_pub = self.create_publisher(Image, '/edge/camera/rgb/image_raw', self.pipeline_qos)
+        self.rgb_info_pub = self.create_publisher(CameraInfo, '/edge/camera/rgb/camera_info', self.pipeline_qos)
+        self.depth_pub = self.create_publisher(Image, '/edge/camera/depth/image_raw', self.pipeline_qos)
+        self.depth_info_pub = self.create_publisher(CameraInfo, '/edge/camera/depth/camera_info', self.pipeline_qos)
         
         # Static Camera Info (Standard OAK-D 1280x800 calibration)
         self.static_info = CameraInfo()

@@ -26,10 +26,10 @@ class RTABMapBridgeNode(Node):
         self.depth_info_buffer = deque(maxlen=30)
         
         # Publishers
-        self.rgb_pub = self.create_publisher(Image, '/camera/rgb/image_raw', 10)
-        self.rgb_info_pub = self.create_publisher(CameraInfo, '/camera/rgb/camera_info', 10)
-        self.depth_pub = self.create_publisher(Image, '/camera/depth/image_raw', 10)
-        self.depth_info_pub = self.create_publisher(CameraInfo, '/camera/depth/camera_info', 10)
+        self.rgb_pub = self.create_publisher(Image, '/edge/camera/rgb/image_raw', 10)
+        self.rgb_info_pub = self.create_publisher(CameraInfo, '/edge/camera/rgb/camera_info', 10)
+        self.depth_pub = self.create_publisher(Image, '/edge/camera/depth/image_raw', 10)
+        self.depth_info_pub = self.create_publisher(CameraInfo, '/edge/camera/depth/camera_info', 10)
         
         # Static Camera Info (Standard OAK-D 1280x800 calibration)
         self.static_info = CameraInfo()

@@ -71,7 +71,7 @@ class ConeDetectorNPUNode(Node):
         # Subscriptions
         self.img_sub = self.create_subscription(
             Image,
-            '/camera/rgb/image_raw',
+            '/edge/camera/rgb/image_raw',
             self.image_callback,
             pipeline_qos
         )

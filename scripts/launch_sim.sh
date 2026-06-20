@@ -9,7 +9,14 @@ LAUNCH_FILE="gazebo.launch.py"
 export GZ_IP=127.0.0.1
 export ROS_LOCALHOST_ONLY=0
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI="file://$WORKSPACE_DIR/install/gazebo_oakd_stream_sender/share/gazebo_oakd_stream_sender/config/cyclonedds.xml"
+# CYCLONEDDS_URI removed to allow default multi-interface binding (lo + eno1)
+unset CYCLONEDDS_URI
+
+# Force NVIDIA discrete GPU for hybrid rendering
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json
+export QT_QPA_PLATFORM=xcb
 
 # 2. Source ROS2 and Workspace
 if [ -f "/opt/ros/jazzy/setup.bash" ]; then

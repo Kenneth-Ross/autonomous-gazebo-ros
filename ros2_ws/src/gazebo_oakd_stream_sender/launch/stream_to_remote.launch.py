@@ -13,7 +13,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
-        SetEnvironmentVariable(name='CYCLONEDDS_URI', value=cyclonedds_config),
         SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
         
         # 1. The Virtual OAK-D Super-Frame Streamer

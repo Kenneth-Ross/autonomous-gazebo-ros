@@ -111,9 +111,9 @@ def generate_launch_description():
                 '/oakd/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             ],
             remappings=[
-                ('/oakd/rgbd_camera/image', '/gazebo/oakd/rgb/image_raw'),
-                ('/oakd/rgbd_camera/depth_image', '/gazebo/oakd/depth/image_raw'),
-                ('/oakd/rgbd_camera/camera_info', '/gazebo/oakd/rgb/camera_info'),
+                ('/oakd/rgbd_camera/image', '/sim/camera/rgb/image_raw'),
+                ('/oakd/rgbd_camera/depth_image', '/sim/camera/depth/image_raw'),
+                ('/oakd/rgbd_camera/camera_info', '/sim/camera/rgb/camera_info'),
             ],
             output='screen'
         ),
