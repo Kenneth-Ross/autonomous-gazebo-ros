@@ -27,10 +27,10 @@ def generate_launch_description():
             ],
             parameters=[{
                 'use_sim_time': use_sim_time,
-                'ffmpeg.encoder': 'hevc_nvenc',
-                'ffmpeg.preset': 'p1',
-                'ffmpeg.tune': 'ull',
-                'ffmpeg.bit_rate': 20000000
+                'sim_camera_encoder.super_frame.ffmpeg.encoder': 'hevc_nvenc',
+                'sim_camera_encoder.super_frame.ffmpeg.preset': 'p1',
+                'sim_camera_encoder.super_frame.ffmpeg.tune': 'ull',
+                'sim_camera_encoder.super_frame.ffmpeg.bit_rate': 20000000
             }],
             output='screen'
         )

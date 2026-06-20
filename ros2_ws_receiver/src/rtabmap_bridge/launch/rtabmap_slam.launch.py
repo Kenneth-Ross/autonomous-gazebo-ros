@@ -70,22 +70,16 @@ def generate_launch_description():
         
         # Define Nodes inside the OpaqueFunction so they pick up the env
         
-        # 1. FFmpeg Image Transport Decoder
+        # 1. FFmpeg Image Transport Decoder (Custom Node to bypass republish bugs)
         decoder_node = Node(
-            package='image_transport',
-            executable='republish',
+            package='sim_camera_decoder',
+            executable='sim_camera_decoder_node',
             name='ffmpeg_decoder',
             remappings=[
-                ('in/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg'),
-                ('out', '~/super_frame_local')
+                ('~/super_frame_local', '/ffmpeg_decoder/super_frame_local')
             ],
             parameters=[{
-                'use_sim_time': use_sim_time,
-                'in_transport': 'ffmpeg',
-                'out_transport': 'raw',
-                # Standardized QoS Overrides
-                'qos_overrides./oakd/super_frame/image_raw/ffmpeg.subscription.reliability': 'best_effort',
-                'qos_overrides./ffmpeg_decoder/super_frame_local.publisher.reliability': 'best_effort'
+                'use_sim_time': use_sim_time
             }],
             output='screen'
         )
