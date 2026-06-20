@@ -61,12 +61,12 @@ class TrackGenerator(Node):
         entity.name = entity_name
         request.entity = entity
         
-        self.get_logger().info(f'Requesting deletion of: {entity_name}')
+        self.get_logger().debug(f'Requesting deletion of: {entity_name}')
         future = self.delete_client.call_async(request)
         try:
             result = await future
             if result.success:
-                self.get_logger().info(f'Deleted entity: {entity_name}')
+                self.get_logger().debug(f'Deleted entity: {entity_name}')
                 return True
             else:
                 self.get_logger().warn(f'Failed to delete entity: {entity_name}')
@@ -89,9 +89,24 @@ class TrackGenerator(Node):
         request.entity_factory.sdf = f"""
             <sdf version="1.8">
                 <model name='{entity_name}'>
-                    <include>
-                        <uri>{CONE_MODEL_URI}</uri>
-                    </include>
+                    <link name='link'>
+                        <collision name='collision'>
+                            <geometry>
+                                <cylinder>
+                                    <radius>0.2</radius>
+                                    <length>0.5</length>
+                                </cylinder>
+                            </geometry>
+                        </collision>
+                        <visual name='visual'>
+                            <geometry>
+                                <mesh>
+                                    <scale>10 10 10</scale>
+                                    <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/construction cone/3/files/meshes/construction_cone.dae</uri>
+                                </mesh>
+                            </geometry>
+                        </visual>
+                    </link>
                 </model>
             </sdf>
         """
@@ -103,7 +118,7 @@ class TrackGenerator(Node):
         try:
             result = await future
             if result.success:
-                self.get_logger().info(f'Spawned entity: {entity_name}')
+                self.get_logger().debug(f'Spawned entity: {entity_name}')
                 return True
             else:
                 self.get_logger().error(f'Failed to spawn entity: {entity_name}')

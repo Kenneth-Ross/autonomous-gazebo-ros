@@ -39,7 +39,9 @@ def generate_launch_description():
             uri = f'''<CycloneDDS xmlns="https://cdds.io/config">
                 <Domain id="any">
                     <General>
-                        <NetworkInterfaceAddress>{iface}</NetworkInterfaceAddress>
+                        <Interfaces>
+                            <NetworkInterface name="{iface}"/>
+                        </Interfaces>
                         <MaxMessageSize>12MB</MaxMessageSize>
                         <FragmentSize>1344B</FragmentSize>
                         <AllowMulticast>spdp</AllowMulticast>

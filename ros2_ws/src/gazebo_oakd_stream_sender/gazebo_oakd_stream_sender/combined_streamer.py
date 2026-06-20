@@ -42,15 +42,15 @@ class CombinedStreamer(Node):
             depth=10
         )
         self.rgb_sub = message_filters.Subscriber(
-            self, Image, '/oakd/rgb/image_raw', qos_profile=sub_qos)
+            self, Image, '/gazebo/oakd/rgb/image_raw', qos_profile=sub_qos)
         self.depth_sub = message_filters.Subscriber(
-            self, Image, '/oakd/depth/image_raw', qos_profile=sub_qos)
+            self, Image, '/gazebo/oakd/depth/image_raw', qos_profile=sub_qos)
         
         # Standard Subscribers JUST for diagnostics
         self.rgb_diag_sub = self.create_subscription(
-            Image, '/oakd/rgb/image_raw', self.rgb_diag_cb, sub_qos)
+            Image, '/gazebo/oakd/rgb/image_raw', self.rgb_diag_cb, sub_qos)
         self.depth_diag_sub = self.create_subscription(
-            Image, '/oakd/depth/image_raw', self.depth_diag_cb, sub_qos)
+            Image, '/gazebo/oakd/depth/image_raw', self.depth_diag_cb, sub_qos)
 
         self.rgb_count = 0
         self.depth_count = 0

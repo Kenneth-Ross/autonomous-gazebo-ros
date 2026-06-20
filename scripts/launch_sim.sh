@@ -40,4 +40,10 @@ pkill -9 -f "gz sim" || true
 pkill -9 -f "ros2" || true
 
 # 5. Launch
+trap "kill 0" EXIT
+
+echo "Starting OAK-D Stream Sender..."
+ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=10.10.12.9 &
+
+echo "Starting Gazebo Simulation..."
 ros2 launch $PACKAGE_NAME $LAUNCH_FILE initial_track:=$TRACK_NAME headless:=$HEADLESS

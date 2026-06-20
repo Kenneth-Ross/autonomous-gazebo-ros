@@ -31,14 +31,27 @@ We migrated the high-bandwidth traffic from Wi-Fi to a dedicated **10.10.12.x** 
 - **Desktop IP:** `10.10.12.10` (Interface: `eno1`)
 - **Orange Pi IP:** `10.10.12.9` (Interface: `enP4p65s0`)
 
-### Fix 2: Kernel Parameter Tuning
+### Fix 2: Physical Link & Auto-Negotiation Diagnostics (NO-CARRIER)
+During setup, the Orange Pi frequently reported a `NO-CARRIER` state on `enP4p65s0`, while the Desktop ping requests succeeded.
+**Root Cause:**
+1. A faulty ethernet cable prevented Auto-Negotiation from establishing a Gigabit link.
+2. Due to Linux's "weak host model", the Desktop's ping requests were routing out the `eno1` interface to a local switch, broadcasting over Wi-Fi, and the Orange Pi was replying over its `wlan0` interface, falsely giving the appearance that the ethernet link was functional.
+
+**Fix:**
+1. Temporarily forced the desktop to 100Mbps to bypass the broken cable pins:
+   `nmcli connection modify "Orange Pi" 802-3-ethernet.auto-negotiate no 802-3-ethernet.speed 100 802-3-ethernet.duplex full`
+2. After procuring a new Cat6 cable, we reverted the interface to full Gigabit Auto-Negotiation and brought the IP profile back up to restore the 1000Mb/s link:
+   `nmcli connection modify "Orange Pi" 802-3-ethernet.auto-negotiate yes 802-3-ethernet.speed 0 802-3-ethernet.duplex ""`
+   `nmcli connection up "Orange Pi"`
+
+### Fix 3: Kernel Parameter Tuning
 Increased the kernel's max socket buffers to **16 MB** on both machines to prevent packet dropping during fragment reassembly.
 ```bash
 sudo sysctl -w net.core.rmem_max=16777216
 sudo sysctl -w net.core.wmem_max=16777216
 ```
 
-### Fix 3: Static Peer Discovery & Network Interface Binding
+### Fix 4: Static Peer Discovery & Network Interface Binding
 Configured CycloneDDS to use **Static Peers** instead of relying on multicast. Additionally, we avoid using `<Interfaces>` blocks with `<NetworkInterface name="..."/>` which can cause parsing/binding crashes on system startups. Instead, we use `<NetworkInterfaceAddress>` to bind dynamically to a specified IP address or physical network interface (e.g., `enP4p65s0`).
 
 **Correct XML Structure:**
@@ -63,7 +76,7 @@ Configured CycloneDDS to use **Static Peers** instead of relying on multicast. A
 </CycloneDDS>
 ```
 
-### Fix 4: Strict Parameter Typing
+### Fix 5: Strict Parameter Typing
 ROS 2 Jazzy is strict about parameter types. The launch files were updated to explicitly convert `use_sim_time` from a launch-argument string ('true') into a Python **Boolean** (True) before passing it to nodes.
 
 ---
