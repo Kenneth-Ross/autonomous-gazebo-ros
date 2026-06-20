@@ -6,7 +6,7 @@ class SimCameraDecoder : public rclcpp::Node {
 public:
     SimCameraDecoder() : Node("ffmpeg_decoder") {
         // Output publisher (uncompressed raw image)
-        pub_ = image_transport::create_publisher(this, "~/super_frame_local", rmw_qos_profile_default);
+        pub_ = image_transport::create_publisher(this, "~/super_frame_local", rmw_qos_profile_sensor_data);
         
         // Input subscriber (requesting 'ffmpeg' transport from the base topic)
         sub_ = image_transport::create_subscription(this, "/oakd/super_frame/image_raw", 
