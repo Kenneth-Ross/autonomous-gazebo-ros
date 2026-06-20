@@ -75,13 +75,14 @@ def generate_launch_description():
             package='image_transport',
             executable='republish',
             name='ffmpeg_decoder',
-            arguments=['ffmpeg', 'raw'],
             remappings=[
                 ('in/ffmpeg', '/oakd/super_frame/image_raw/ffmpeg'),
                 ('out', '~/super_frame_local')
             ],
             parameters=[{
                 'use_sim_time': use_sim_time,
+                'in_transport': 'ffmpeg',
+                'out_transport': 'raw',
                 # Standardized QoS Overrides
                 'qos_overrides./oakd/super_frame/image_raw/ffmpeg.subscription.reliability': 'best_effort',
                 'qos_overrides./ffmpeg_decoder/super_frame_local.publisher.reliability': 'best_effort'

@@ -2,13 +2,16 @@
 <CycloneDDS xmlns="https://cdds.io/config">
     <Domain id="any">
         <General>
-            <NetworkInterfaceAddress>10.10.12.9</NetworkInterfaceAddress>
+            <Interfaces>
+                <NetworkInterface address="10.10.12.9"/>
+            </Interfaces>
             <MaxMessageSize>12MB</MaxMessageSize>
             <FragmentSize>1344B</FragmentSize>
             <AllowMulticast>spdp</AllowMulticast>
         </General>
         <Internal>
             <SocketReceiveBufferSize min="10MB"/>
+            <SocketSendBufferSize min="10MB"/>
         </Internal>
         <Discovery>
             <Peers>

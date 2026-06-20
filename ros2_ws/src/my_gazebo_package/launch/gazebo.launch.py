@@ -100,19 +100,15 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # Bridge for camera topics (Images and Info)
+        # Bridge for camera info
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
             name='camera_bridge',
             arguments=[
-                '/oakd/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
-                '/oakd/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image',
                 '/oakd/rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             ],
             remappings=[
-                ('/oakd/rgbd_camera/image', '/sim/camera/rgb/image_raw'),
-                ('/oakd/rgbd_camera/depth_image', '/sim/camera/depth/image_raw'),
                 ('/oakd/rgbd_camera/camera_info', '/sim/camera/rgb/camera_info'),
             ],
             output='screen'
