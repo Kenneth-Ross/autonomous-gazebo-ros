@@ -41,11 +41,11 @@ def generate_launch_description():
                     <General>
                         <MaxMessageSize>12MB</MaxMessageSize>
                         <FragmentSize>1344B</FragmentSize>
-                        <AllowMulticast>spdp</AllowMulticast>
+                        <AllowMulticast>true</AllowMulticast>
                     </General>
                     <Internal>
-                        <SocketReceiveBufferSize min="10MB"/>
-                        <SocketSendBufferSize min="10MB"/>
+                        <SocketReceiveBufferSize min="50MB"/>
+                        <SocketSendBufferSize min="50MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
@@ -57,11 +57,11 @@ def generate_launch_description():
                     <General>
                         <MaxMessageSize>12MB</MaxMessageSize>
                         <FragmentSize>1344B</FragmentSize>
-                        <AllowMulticast>spdp</AllowMulticast>
+                        <AllowMulticast>true</AllowMulticast>
                     </General>
                     <Internal>
-                        <SocketReceiveBufferSize min="10MB"/>
-                        <SocketSendBufferSize min="10MB"/>
+                        <SocketReceiveBufferSize min="50MB"/>
+                        <SocketSendBufferSize min="50MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
@@ -98,8 +98,6 @@ def generate_launch_description():
                     '^/map$', '^/odometry/filtered$',
                     '^/rtabmap/.*', 
                     '^/ground_truth/tf$',
-                    '^/edge/camera/rgb/image_raw$',
-                    '^/edge/camera/depth/image_raw$',
                     '^/edge/camera/rgb/image_raw/compressed$',
                     '^/edge/camera/depth/image_raw/compressed$',
                     '^/yolo/detections$'
