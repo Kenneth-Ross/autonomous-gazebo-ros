@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from vision_msgs.msg import Detection2DArray, Detection2D, ObjectHypothesisWithPose
 from cv_bridge import CvBridge
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
@@ -70,8 +70,8 @@ class ConeDetectorNPUNode(Node):
         
         # Subscriptions
         self.img_sub = self.create_subscription(
-            Image,
-            '/edge/camera/rgb/image_raw',
+            CompressedImage,
+            '/edge/camera/rgb/image_raw/compressed',
             self.image_callback,
             pipeline_qos
         )
@@ -84,7 +84,12 @@ class ConeDetectorNPUNode(Node):
             return
             
         try:
-            cv_img = self.br.imgmsg_to_cv2(msg, "bgr8")
+            # Decode the CompressedImage
+            np_arr = np.frombuffer(msg.data, np.uint8)
+            cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            if cv_img is None:
+                self.get_logger().error("Failed to decode compressed image")
+                return
         except Exception as e:
             self.get_logger().error(f"Failed to convert ROS image: {e}")
             return
