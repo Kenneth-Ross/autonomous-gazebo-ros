@@ -57,9 +57,9 @@ class ConeDetectorNPUNode(Node):
                         self.get_logger().error(f"Exception initializing RKNN runtime: {e}")
                         self.rknn = None
         
-        # QoS Profile matching the unpacker node (best effort for high-bandwidth images)
+        # QoS Profile matching the unpacker node (reliable)
         pipeline_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
             depth=10,
             durability=DurabilityPolicy.VOLATILE
@@ -79,6 +79,10 @@ class ConeDetectorNPUNode(Node):
         self.get_logger().info("Cone Detector NPU Node initialized.")
 
     def image_callback(self, msg):
+        if not hasattr(self, 'first_frame_seen'):
+            self.first_frame_seen = True
+            self.get_logger().info("YOLO NODE RECEIVED ITS VERY FIRST FRAME MSG!")
+            
         if self.rknn is None:
             self.get_logger().warn("RKNN runtime is not initialized. Skipping frame.")
             return
@@ -147,6 +151,8 @@ class ConeDetectorNPUNode(Node):
         
         if not hasattr(self, 'frame_count'):
             self.frame_count = 0
+            self.get_logger().info(f"YOLO NODE RECEIVED FIRST FRAME SUCCESSFULLY!")
+        
         self.frame_count += 1
         if self.frame_count % 30 == 0:
             max_conf = np.max(conf) if len(conf) > 0 else 0

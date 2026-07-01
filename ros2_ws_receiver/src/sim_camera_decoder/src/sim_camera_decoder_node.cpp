@@ -13,12 +13,12 @@ class SimCameraDecoder : public rclcpp::Node {
 public:
     SimCameraDecoder(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) 
     : Node("ffmpeg_decoder", options), last_published_time_(0, 0, this->get_clock()->get_clock_type()) {
-        rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
-        rgb_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/rgb/image_raw/compressed", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
-        rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
-        depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
-        depth_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/depth/image_raw/compressed", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
-        depth_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(10));
+        rgb_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/rgb/image_raw/compressed", rclcpp::QoS(10));
+        rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(10));
+        depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(10));
+        depth_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/depth/image_raw/compressed", rclcpp::QoS(10));
+        depth_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", rclcpp::QoS(10));
         
         // Static Camera Info
         static_info_.width = 1280;
