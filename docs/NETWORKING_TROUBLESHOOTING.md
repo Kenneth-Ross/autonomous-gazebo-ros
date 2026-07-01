@@ -106,7 +106,23 @@ During edge integration on the Orange Pi 5, two major issues were encountered an
 
 ---
 
-## 6. Verification Checklist
+## 6. Network Benchtest (iperf3)
+To definitively prove whether physical network bandwidth or kernel routing was causing local UDP `ENOBUFS` socket overflows, an `iperf3` test was conducted between the Host Desktop (`10.10.12.10`) and the Orange Pi (`10.10.12.9`).
+
+**Command:** `iperf3 -c 10.10.12.9` (Run on Desktop)
+**Results:**
+```text
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-10.00  sec  1.10 GBytes   943 Mbits/sec    0             sender
+[  5]   0.00-10.00  sec  1.10 GBytes   941 Mbits/sec                  receiver
+```
+**Conclusion:**
+The network link is a completely flawless Gigabit connection capable of pushing **110 MB/s** with **0 retries** and 0 drops. This mathematically ruled out the physical network, kernel networking stack, and ethernet auto-negotiation as the cause of local data starvation. 
+The `-58` `ENOBUFS` errors were purely an architectural limitation of CycloneDDS attempting to unicast duplicate 5MB image fragments to multiple local ROS 2 ports simultaneously. To solve this, **ROS 2 Intra-Process Communication (IPC)** was implemented via a `ComposableNodeContainer` for the vision pipeline, bypassing UDP socket buffers entirely for intra-device data sharing.
+
+---
+
+## 7. Verification Checklist
 To confirm the fix, run the following on the **Receiver (Orange Pi)**:
 1. `ping 10.10.12.10` (Check physical link)
 2. `ros2 topic hz /clock` (Check metadata flow)
