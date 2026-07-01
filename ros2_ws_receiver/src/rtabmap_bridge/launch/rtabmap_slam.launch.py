@@ -46,6 +46,7 @@ def generate_launch_description():
                     </General>
                     <Internal>
                         <SocketReceiveBufferSize min="10MB"/>
+                        <SocketSendBufferSize min="10MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
@@ -61,6 +62,7 @@ def generate_launch_description():
                     </General>
                     <Internal>
                         <SocketReceiveBufferSize min="10MB"/>
+                        <SocketSendBufferSize min="10MB"/>
                     </Internal>
                     <Discovery><Peers><Peer address="10.10.12.10"/></Peers></Discovery>
                 </Domain>
