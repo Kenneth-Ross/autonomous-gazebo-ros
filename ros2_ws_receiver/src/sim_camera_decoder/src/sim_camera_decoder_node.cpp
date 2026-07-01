@@ -7,11 +7,11 @@
 
 class SimCameraDecoder : public rclcpp::Node {
 public:
-    SimCameraDecoder() : Node("ffmpeg_decoder") {
-        rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort());
-        rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort());
-        depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort());
-        depth_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", rclcpp::QoS(rclcpp::KeepLast(10)).best_effort());
+    SimCameraDecoder() : Node("ffmpeg_decoder"), last_published_time_(0, 0, this->get_clock()->get_clock_type()) {
+        rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        depth_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         
         // Static Camera Info
         static_info_.width = 1280;
@@ -27,10 +27,21 @@ public:
             std::bind(&SimCameraDecoder::imageCallback, this, std::placeholders::_1),
             "ffmpeg", rmw_qos_profile_default);
             
-        RCLCPP_INFO(this->get_logger(), "Custom FFMPEG Decoder & Unpacker Node Started.");
+        RCLCPP_INFO(this->get_logger(), "Custom FFMPEG Decoder & Unpacker Node Started. Throttling output to ~5 FPS.");
     }
 private:
     void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr & msg) {
+        // Throttle to ~5 FPS (0.2 seconds between frames)
+        rclcpp::Time current_time(msg->header.stamp);
+        if (current_time.seconds() == 0.0) {
+             current_time = this->now();
+        }
+        
+        if (last_published_time_.seconds() != 0.0 && (current_time - last_published_time_).seconds() < 0.2) {
+            return; // Skip frame
+        }
+        last_published_time_ = current_time;
+
         RCLCPP_INFO_ONCE(this->get_logger(), "Received first decoded frame from ffmpeg!");
         
         cv_bridge::CvImagePtr cv_ptr;
@@ -87,6 +98,7 @@ private:
     
     image_transport::Subscriber sub_;
     sensor_msgs::msg::CameraInfo static_info_;
+    rclcpp::Time last_published_time_;
 };
 
 int main(int argc, char **argv) {
