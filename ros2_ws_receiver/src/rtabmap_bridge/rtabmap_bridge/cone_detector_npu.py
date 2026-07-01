@@ -145,6 +145,13 @@ class ConeDetectorNPUNode(Node):
         # Run NMS
         indices = cv2.dnn.NMSBoxes(boxes, confidences, self.conf_threshold, self.nms_threshold)
         
+        if not hasattr(self, 'frame_count'):
+            self.frame_count = 0
+        self.frame_count += 1
+        if self.frame_count % 30 == 0:
+            max_conf = np.max(conf) if len(conf) > 0 else 0
+            self.get_logger().info(f"Processed frame {self.frame_count}. Max conf: {max_conf:.4f}. Found {len(indices) if len(indices) > 0 else 0} cones.")
+
         # Build Detection2DArray message
         det_array_msg = Detection2DArray()
         det_array_msg.header = msg.header # Keep same timestamp and frame id
