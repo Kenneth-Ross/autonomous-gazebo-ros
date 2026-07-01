@@ -80,7 +80,7 @@ class ConeLandmarkProcessor(Node):
             p_transformed = tf2_geometry_msgs.do_transform_point(p, t)
             return np.array([p_transformed.point.x, p_transformed.point.y, p_transformed.point.z])
         except Exception as e:
-            self.get_logger().debug(f"TF transform failed from {from_frame} to {to_frame}: {e}")
+            self.get_logger().warn(f"TF transform failed from {from_frame} to {to_frame}: {e}")
             return None
 
     def callback(self, depth_msg, yolo_msg):
@@ -139,6 +139,7 @@ class ConeLandmarkProcessor(Node):
             # Filter out invalid depth pixels (0 or NaN)
             valid_mask = (roi > 0) & (~np.isnan(roi))
             if not np.any(valid_mask):
+                self.get_logger().warn(f"ROI around cone at {u_center},{v_center} contains no valid depth pixels!")
                 continue
                 
             # Median depth in millimeters, convert to meters
@@ -186,7 +187,7 @@ class ConeLandmarkProcessor(Node):
                     })
                     self.get_logger().info(f"Registered new landmark: {class_id} (ID: {landmark_id}) at {map_pos}")
             else:
-                self.get_logger().debug("Could not transform landmark to map/odom frame; using transient landmark ID.")
+                self.get_logger().warn("Could not transform landmark to map/odom frame; using transient landmark ID.")
             
             # Create LandmarkDetection (relative to camera_link_optical frame)
             lm_det = LandmarkDetection()

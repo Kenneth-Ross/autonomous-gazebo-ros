@@ -177,8 +177,9 @@ class ConeDetectorNPUNode(Node):
                 det.bbox.center.position.y = float(box[1] + box[3] / 2.0)
                 det.bbox.size_x = float(box[2])
                 det.bbox.size_y = float(box[3])
+                det.id = "cone"
                 
-                # Add hypothesis
+                # Setup hypothesis
                 hyp = ObjectHypothesisWithPose()
                 hyp.hypothesis.class_id = "cone"
                 hyp.hypothesis.score = float(score)
