@@ -12,6 +12,10 @@ from launch.substitutions import LaunchConfiguration, PythonExpression
 def generate_launch_description():
     pkg_share = get_package_share_directory('rtabmap_bridge')
     
+    # Silence CycloneDDS -58 ENOBUFS warnings by pointing it to a quiet config
+    quiet_cyclone_config = os.path.join(pkg_share, 'config', 'quiet_cyclonedds.xml')
+    os.environ['CYCLONEDDS_URI'] = f'file://{quiet_cyclone_config}'
+
     # Launch Arguments
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='true')
     network_interface_arg = DeclareLaunchArgument('network_interface', default_value='', description='Network interface to use for CycloneDDS (e.g., eth0, wlan0)')
