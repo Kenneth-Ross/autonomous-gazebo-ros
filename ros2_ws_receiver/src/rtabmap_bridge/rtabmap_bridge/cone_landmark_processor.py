@@ -190,19 +190,19 @@ class ConeLandmarkProcessor(Node):
             # Create LandmarkDetection (relative to camera_link_optical frame)
             lm_det = LandmarkDetection()
             lm_det.id = landmark_id
-            lm_det.label = class_id
+            lm_det.landmark_frame_id = f"{class_id}_{landmark_id}"
             lm_det.size = float(max(size_x, size_y) * z_m / fx) # Estimate physical width of the cone
             
             # Pose relative to camera
-            lm_det.pose.position.x = float(x_c)
-            lm_det.pose.position.y = float(y_c)
-            lm_det.pose.position.z = float(z_c)
-            lm_det.pose.orientation.w = 1.0 # Point landmark, no orientation
+            lm_det.pose.pose.position.x = float(x_c)
+            lm_det.pose.pose.position.y = float(y_c)
+            lm_det.pose.pose.position.z = float(z_c)
+            lm_det.pose.pose.orientation.w = 1.0 # Point landmark, no orientation
             
             # Add simple covariance
-            lm_det.covariance[0] = 0.05 # variance x
-            lm_det.covariance[7] = 0.05 # variance y
-            lm_det.covariance[14] = 0.1 # variance z
+            lm_det.pose.covariance[0] = 0.05 # variance x
+            lm_det.pose.covariance[7] = 0.05 # variance y
+            lm_det.pose.covariance[14] = 0.1 # variance z
             
             landmarks_msg.detections.append(lm_det)
             
