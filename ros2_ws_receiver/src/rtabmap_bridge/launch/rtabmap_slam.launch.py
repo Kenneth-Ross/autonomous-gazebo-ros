@@ -174,6 +174,7 @@ def generate_launch_description():
                 'Grid/MaxGroundHeight': '0.2',
                 'Grid/MaxGroundAngle': '45',
                 'Grid/RangeMax': '5.0',
+                'Grid/DepthDecimation': '4',
                 'subscribe_scan': False,
                 'wait_for_transform': 0.5
             }],
@@ -217,7 +218,7 @@ def generate_launch_description():
             name='vision_container',
             namespace='',
             package='rclcpp_components',
-            executable='component_container',
+            executable='component_container_mt',
             composable_node_descriptions=[
                 decoder_node,
                 rtabmap_node,
