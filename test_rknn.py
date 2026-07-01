@@ -10,8 +10,9 @@ except ImportError:
     sys.exit(1)
 
 def test_yolo():
-    model_path = 'yolo11n_416_qat_int8_fp16out.rknn'
-    img_path = 'test_image.jpg'
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    model_path = os.path.join(script_dir, 'yolo11n_416_qat_int8_fp16out.rknn')
+    img_path = os.path.join(script_dir, 'test_image.jpg')
     
     if not os.path.exists(model_path):
         print(f"Model not found: {model_path}")
