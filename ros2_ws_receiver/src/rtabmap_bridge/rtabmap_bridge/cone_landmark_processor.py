@@ -27,9 +27,9 @@ class ConeLandmarkProcessor(Node):
         self.next_landmark_id = 1
         self.association_threshold = 1.0 # meters
         
-        # Standardized Pipeline QoS (Best Effort) for high bandwidth depth stream
+        # Standardized Pipeline QoS (Reliable)
         pipeline_qos = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
             history=HistoryPolicy.KEEP_LAST,
             depth=10,
             durability=DurabilityPolicy.VOLATILE
@@ -84,6 +84,7 @@ class ConeLandmarkProcessor(Node):
             return None
 
     def callback(self, depth_msg, yolo_msg):
+        self.get_logger().info(f"Callback triggered with {len(yolo_msg.detections)} detections!")
         if self.camera_info is None:
             self.get_logger().warn("Waiting for camera_info...")
             return
