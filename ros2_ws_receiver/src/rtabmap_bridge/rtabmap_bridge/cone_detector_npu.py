@@ -173,8 +173,8 @@ class ConeDetectorNPUNode(Node):
                 det.header = msg.header
                 
                 # Setup bbox
-                det.bbox.center.x = float(box[0] + box[2] / 2.0)
-                det.bbox.center.y = float(box[1] + box[3] / 2.0)
+                det.bbox.center.position.x = float(box[0] + box[2] / 2.0)
+                det.bbox.center.position.y = float(box[1] + box[3] / 2.0)
                 det.bbox.size_x = float(box[2])
                 det.bbox.size_y = float(box[3])
                 
