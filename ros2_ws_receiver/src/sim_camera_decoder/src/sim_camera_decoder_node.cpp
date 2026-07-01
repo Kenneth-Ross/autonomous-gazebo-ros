@@ -5,6 +5,7 @@
 #include "cv_bridge/cv_bridge.hpp"
 #include <opencv2/opencv.hpp>
 #include "sensor_msgs/msg/compressed_image.hpp"
+#include <thread>
 
 #include "rclcpp_components/register_node_macro.hpp"
 
@@ -96,17 +97,19 @@ private:
         rgb_pub_->publish(std::move(rgb_msg));
         depth_pub_->publish(std::move(depth_msg));
         
-        auto rgb_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
-        rgb_comp_msg->header = header;
-        rgb_comp_msg->format = "jpeg";
-        cv::imencode(".jpg", rgb_frame, rgb_comp_msg->data, {cv::IMWRITE_JPEG_QUALITY, 50});
-        rgb_compressed_pub_->publish(std::move(rgb_comp_msg));
+        std::thread([this, header, rgb_frame, depth_16bit]() {
+            auto rgb_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+            rgb_comp_msg->header = header;
+            rgb_comp_msg->format = "jpeg";
+            cv::imencode(".jpg", rgb_frame, rgb_comp_msg->data, {cv::IMWRITE_JPEG_QUALITY, 50});
+            rgb_compressed_pub_->publish(std::move(rgb_comp_msg));
 
-        auto depth_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
-        depth_comp_msg->header = header;
-        depth_comp_msg->format = "png";
-        cv::imencode(".png", depth_16bit, depth_comp_msg->data, {cv::IMWRITE_PNG_COMPRESSION, 3});
-        depth_compressed_pub_->publish(std::move(depth_comp_msg));
+            auto depth_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+            depth_comp_msg->header = header;
+            depth_comp_msg->format = "png";
+            cv::imencode(".png", depth_16bit, depth_comp_msg->data, {cv::IMWRITE_PNG_COMPRESSION, 3});
+            depth_compressed_pub_->publish(std::move(depth_comp_msg));
+        }).detach();
 
         auto info_msg1 = std::make_unique<sensor_msgs::msg::CameraInfo>(static_info_);
         rgb_info_pub_->publish(std::move(info_msg1));
