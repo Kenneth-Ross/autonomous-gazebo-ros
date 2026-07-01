@@ -119,8 +119,8 @@ class ConeLandmarkProcessor(Node):
 
         for det in yolo_msg.detections:
             # Extract 2D bounding box
-            u_center = det.bbox.center.x
-            v_center = det.bbox.center.y
+            u_center = det.bbox.center.position.x
+            v_center = det.bbox.center.position.y
             size_x = det.bbox.size_x
             size_y = det.bbox.size_y
             
