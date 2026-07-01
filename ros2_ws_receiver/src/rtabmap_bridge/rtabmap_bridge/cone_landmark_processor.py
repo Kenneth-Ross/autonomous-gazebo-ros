@@ -151,10 +151,12 @@ class ConeLandmarkProcessor(Node):
             z_c = z_m
             
             # Data Association: Transform to map frame for persistent ID tracking
-            # We check both 'map' and fallback 'odom' as target frames
-            map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'map', stamp)
+            # We check both 'map' and fallback 'odom' as target frames using the latest available transform (Time 0)
+            # to avoid extrapolation into the future errors caused by async SLAM updates
+            latest_time = rclpy.time.Time()
+            map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'map', latest_time)
             if map_pos is None:
-                map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'odom', stamp)
+                map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'odom', latest_time)
                 
             landmark_id = -1
             class_id = "cone"
