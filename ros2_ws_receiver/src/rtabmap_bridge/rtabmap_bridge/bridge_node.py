@@ -161,17 +161,3 @@ def main(args=None):
 if __name__ == '__main__':
     main()
 
-def main(args=None):
-    rclpy.init(args=args)
-    node = RTABMapBridgeNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.pipeline.set_state(Gst.State.NULL)
-        node.destroy_node()
-        rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
