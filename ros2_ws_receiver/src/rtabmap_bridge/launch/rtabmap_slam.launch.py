@@ -155,7 +155,7 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
-                'subscribe_landmark_detections': True,
+                'subscribe_landmarks': True,
                 'qos_image': 2,
                 'qos_camera_info': 2,
                 'frame_id': 'base_link',
@@ -187,7 +187,7 @@ def generate_launch_description():
                 ('rgb/camera_info', '/edge/camera/rgb/camera_info'),
                 ('depth/camera_info', '/edge/camera/depth/camera_info'),
                 ('odom', '/odometry/filtered'),
-                ('landmark_detections', '/rtabmap/landmark_detections')
+                ('landmarks', '/rtabmap/landmark_detections')
             ],
             extra_arguments=[{'use_intra_process_comms': True}]
         )
