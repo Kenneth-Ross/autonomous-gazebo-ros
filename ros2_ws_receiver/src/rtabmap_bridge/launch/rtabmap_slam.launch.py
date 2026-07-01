@@ -1,7 +1,8 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch_ros.actions import Node
+from launch_ros.actions import Node, ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 
@@ -70,14 +71,12 @@ def generate_launch_description():
         # Define Nodes inside the OpaqueFunction so they pick up the env
         
         # 1. FFmpeg Image Transport Decoder & Unpacker
-        decoder_node = Node(
+        decoder_node = ComposableNode(
             package='sim_camera_decoder',
-            executable='sim_camera_decoder_node',
+            plugin='SimCameraDecoder',
             name='ffmpeg_decoder',
-            parameters=[{
-                'use_sim_time': use_sim_time
-            }],
-            output='screen'
+            parameters=[{'use_sim_time': use_sim_time}],
+            extra_arguments=[{'use_intra_process_comms': True}]
         )
 
         # 3. Foxglove Bridge (Quiet and Robust Configuration)
@@ -144,25 +143,24 @@ def generate_launch_description():
             parameters=[os.path.join(pkg_share, 'config', 'ekf.yaml'), {'use_sim_time': use_sim_time}]
         )
 
-        # 7. RTAB-Map Node
-        rtabmap_node = Node(
+        # 7. RTAB-Map SLAM Node
+        rtabmap_node = ComposableNode(
             package='rtabmap_slam',
-            executable='rtabmap',
+            plugin='rtabmap_slam::CoreWrapper',
             name='rtabmap',
-            output='screen',
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'subscribe_depth': True,
                 'subscribe_rgb': True,
                 'subscribe_landmark_detections': True,
-                'qos_image': 2, # 2 = SensorData / Best Effort in ROS 2 rtabmap_ros
+                'qos_image': 2,
                 'qos_camera_info': 2,
                 'frame_id': 'base_link',
                 'map_frame_id': 'map',
                 'odom_frame_id': 'odom',
                 'publish_tf': True,
                 'approx_sync': True,
-                'approx_sync_max_interval': 0.1, # 100ms slop for network jitter
+                'approx_sync_max_interval': 0.1,
                 'queue_size': 50,
                 'sync_queue_size': 50,
                 'Vis/MaxFeatures': '600',
@@ -187,19 +185,18 @@ def generate_launch_description():
                 ('odom', '/odometry/filtered'),
                 ('landmark_detections', '/rtabmap/landmark_detections')
             ],
-            arguments=['-d']
+            extra_arguments=[{'use_intra_process_comms': True}]
         )
 
         # 8. RGB-D Odometry Node
-        rgbd_odometry_node = Node(
+        rgbd_odometry_node = ComposableNode(
             package='rtabmap_odom',
-            executable='rgbd_odometry',
+            plugin='rtabmap_odom::RGBDOdometry',
             name='rgbd_odometry',
-            output='screen',
             parameters=[{
                 'use_sim_time': use_sim_time,
                 'frame_id': 'base_link',
-                'qos': 2, # 2 = SensorData / Best Effort in ROS 2 rtabmap_ros
+                'qos': 2,
                 'qos_camera_info': 2,
                 'odom_frame_id': 'rtabmap/odom',
                 'publish_tf': False,
@@ -212,7 +209,21 @@ def generate_launch_description():
                 ('depth/image', '/edge/camera/depth/image_raw'),
                 ('rgb/camera_info', '/edge/camera/rgb/camera_info'),
                 ('depth/camera_info', '/edge/camera/depth/camera_info')
-            ]
+            ],
+            extra_arguments=[{'use_intra_process_comms': True}]
+        )
+        
+        vision_container = ComposableNodeContainer(
+            name='vision_container',
+            namespace='',
+            package='rclcpp_components',
+            executable='component_container',
+            composable_node_descriptions=[
+                decoder_node,
+                rtabmap_node,
+                rgbd_odometry_node
+            ],
+            output='screen'
         )
 
         # 9. NPU Detector Node (runs on Orange Pi 5 NPU)
@@ -241,14 +252,12 @@ def generate_launch_description():
         return [
             SetEnvironmentVariable(name='CYCLONEDDS_URI', value=uri),
             SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
-            decoder_node,
+            vision_container,
             foxglove_bridge,
             gt_broadcaster,
             static_tf_world_map,
             static_tf_camera,
             ekf_node,
-            rtabmap_node,
-            rgbd_odometry_node,
             npu_detector_node,
             landmark_processor_node
         ]

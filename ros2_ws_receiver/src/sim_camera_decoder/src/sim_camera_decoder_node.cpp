@@ -5,9 +5,12 @@
 #include "cv_bridge/cv_bridge.hpp"
 #include <opencv2/opencv.hpp>
 
+#include "rclcpp_components/register_node_macro.hpp"
+
 class SimCameraDecoder : public rclcpp::Node {
 public:
-    SimCameraDecoder() : Node("ffmpeg_decoder"), last_published_time_(0, 0, this->get_clock()->get_clock_type()) {
+    SimCameraDecoder(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) 
+    : Node("ffmpeg_decoder", options), last_published_time_(0, 0, this->get_clock()->get_clock_type()) {
         rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
@@ -80,15 +83,21 @@ private:
         auto header = msg->header;
         header.frame_id = "camera_link_optical";
 
-        sensor_msgs::msg::Image::SharedPtr rgb_msg = cv_bridge::CvImage(header, "bgr8", rgb_frame).toImageMsg();
-        sensor_msgs::msg::Image::SharedPtr depth_msg = cv_bridge::CvImage(header, "16UC1", depth_16bit).toImageMsg();
+        auto rgb_msg = std::make_unique<sensor_msgs::msg::Image>();
+        cv_bridge::CvImage(header, "bgr8", rgb_frame).toImageMsg(*rgb_msg);
+        auto depth_msg = std::make_unique<sensor_msgs::msg::Image>();
+        cv_bridge::CvImage(header, "16UC1", depth_16bit).toImageMsg(*depth_msg);
 
         static_info_.header = header;
 
-        rgb_pub_->publish(*rgb_msg);
-        depth_pub_->publish(*depth_msg);
-        rgb_info_pub_->publish(static_info_);
-        depth_info_pub_->publish(static_info_);
+        rgb_pub_->publish(std::move(rgb_msg));
+        depth_pub_->publish(std::move(depth_msg));
+        
+        auto info_msg1 = std::make_unique<sensor_msgs::msg::CameraInfo>(static_info_);
+        rgb_info_pub_->publish(std::move(info_msg1));
+        
+        auto info_msg2 = std::make_unique<sensor_msgs::msg::CameraInfo>(static_info_);
+        depth_info_pub_->publish(std::move(info_msg2));
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_;
@@ -100,6 +109,8 @@ private:
     sensor_msgs::msg::CameraInfo static_info_;
     rclcpp::Time last_published_time_;
 };
+
+RCLCPP_COMPONENTS_REGISTER_NODE(SimCameraDecoder)
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);

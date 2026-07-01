@@ -8,19 +8,23 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_executable(sim_camera_decoder_node src/sim_camera_decoder_node.cpp)
-target_include_directories(sim_camera_decoder_node PUBLIC ${OpenCV_INCLUDE_DIRS})
-ament_target_dependencies(sim_camera_decoder_node rclcpp sensor_msgs image_transport cv_bridge)
-target_link_libraries(sim_camera_decoder_node ${OpenCV_LIBRARIES})
+add_library(sim_camera_decoder_component SHARED src/sim_camera_decoder_node.cpp)
+target_include_directories(sim_camera_decoder_component PUBLIC ${OpenCV_INCLUDE_DIRS})
+ament_target_dependencies(sim_camera_decoder_component rclcpp rclcpp_components sensor_msgs image_transport cv_bridge)
+target_link_libraries(sim_camera_decoder_component ${OpenCV_LIBRARIES})
+rclcpp_components_register_node(sim_camera_decoder_component PLUGIN "SimCameraDecoder" EXECUTABLE sim_camera_decoder_node)
 
 install(TARGETS
-  sim_camera_decoder_node
-  DESTINATION lib/${PROJECT_NAME}
+  sim_camera_decoder_component
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
 if(BUILD_TESTING)
