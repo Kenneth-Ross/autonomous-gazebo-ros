@@ -205,9 +205,9 @@ class ConeLandmarkProcessor(Node):
             lm_det.pose.covariance[7] = 0.05 # variance y
             lm_det.pose.covariance[14] = 0.1 # variance z
             
-            landmarks_msg.detections.append(lm_det)
+            landmarks_msg.landmarks.append(lm_det)
             
-        if landmarks_msg.detections:
+        if landmarks_msg.landmarks:
             self.landmark_pub.publish(landmarks_msg)
 
 def main(args=None):
