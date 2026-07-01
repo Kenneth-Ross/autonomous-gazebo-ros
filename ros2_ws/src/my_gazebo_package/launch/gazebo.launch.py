@@ -173,12 +173,16 @@ def generate_launch_description():
                     output='screen',
                     parameters=[{'initial_track': initial_track}]
                 ),
-                Node(
-                    package='my_gazebo_package',
-                    executable='driving_model_node.py',
-                    name='driving_model',
-                    output='screen',
-                    parameters=[{'auto_drive': False}]
+                #Node(
+                #    package='my_gazebo_package',
+                #    executable='driving_model_node.py',
+                #    name='driving_model',
+                #    output='screen',
+                #    parameters=[{'auto_drive': False}]
+                #),
+                ExecuteProcess(
+                    cmd=['ros2', 'topic', 'pub', '-r', '10', '/cmd_vel', 'geometry_msgs/msg/Twist', '{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.4}}'],
+                    output='screen'
                 )
             ]
         )
