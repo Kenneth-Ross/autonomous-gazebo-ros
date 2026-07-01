@@ -10,9 +10,13 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(image_transport REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
 
 add_executable(sim_camera_decoder_node src/sim_camera_decoder_node.cpp)
-ament_target_dependencies(sim_camera_decoder_node rclcpp sensor_msgs image_transport)
+target_include_directories(sim_camera_decoder_node PUBLIC ${OpenCV_INCLUDE_DIRS})
+ament_target_dependencies(sim_camera_decoder_node rclcpp sensor_msgs image_transport cv_bridge)
+target_link_libraries(sim_camera_decoder_node ${OpenCV_LIBRARIES})
 
 install(TARGETS
   sim_camera_decoder_node

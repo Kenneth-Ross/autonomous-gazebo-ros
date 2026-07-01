@@ -70,29 +70,14 @@ def generate_launch_description():
         
         # Define Nodes inside the OpaqueFunction so they pick up the env
         
-        # 1. FFmpeg Image Transport Decoder (Custom Node to bypass republish bugs)
+        # 1. FFmpeg Image Transport Decoder & Unpacker
         decoder_node = Node(
             package='sim_camera_decoder',
             executable='sim_camera_decoder_node',
             name='ffmpeg_decoder',
-            remappings=[
-                ('~/super_frame_local', '/ffmpeg_decoder/super_frame_local')
-            ],
             parameters=[{
                 'use_sim_time': use_sim_time
             }],
-            output='screen'
-        )
-
-        # 2. Virtual OAK-D Unpacker Node
-        unpacker_node = Node(
-            package='rtabmap_bridge',
-            executable='unpacker_node',
-            name='virtual_oakd_unpacker',
-            remappings=[
-                ('image_in', '/ffmpeg_decoder/super_frame_local')
-            ],
-            parameters=[{'use_sim_time': use_sim_time}],
             output='screen'
         )
 
@@ -260,7 +245,6 @@ def generate_launch_description():
             SetEnvironmentVariable(name='CYCLONEDDS_URI', value=uri),
             SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
             decoder_node,
-            unpacker_node,
             foxglove_bridge,
             gt_broadcaster,
             static_tf_world_map,
