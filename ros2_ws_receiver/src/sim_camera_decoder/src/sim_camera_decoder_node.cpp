@@ -4,6 +4,7 @@
 #include "image_transport/image_transport.hpp"
 #include "cv_bridge/cv_bridge.hpp"
 #include <opencv2/opencv.hpp>
+#include "sensor_msgs/msg/compressed_image.hpp"
 
 #include "rclcpp_components/register_node_macro.hpp"
 
@@ -12,8 +13,10 @@ public:
     SimCameraDecoder(const rclcpp::NodeOptions & options = rclcpp::NodeOptions()) 
     : Node("ffmpeg_decoder", options), last_published_time_(0, 0, this->get_clock()->get_clock_type()) {
         rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        rgb_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/rgb/image_raw/compressed", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         rgb_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/edge/camera/depth/image_raw", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
+        depth_compressed_pub_ = this->create_publisher<sensor_msgs::msg::CompressedImage>("/edge/camera/depth/image_raw/compressed", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         depth_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", rclcpp::QoS(rclcpp::KeepLast(2)).best_effort());
         
         // Static Camera Info
@@ -93,6 +96,18 @@ private:
         rgb_pub_->publish(std::move(rgb_msg));
         depth_pub_->publish(std::move(depth_msg));
         
+        auto rgb_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+        rgb_comp_msg->header = header;
+        rgb_comp_msg->format = "jpeg";
+        cv::imencode(".jpg", rgb_frame, rgb_comp_msg->data, {cv::IMWRITE_JPEG_QUALITY, 50});
+        rgb_compressed_pub_->publish(std::move(rgb_comp_msg));
+
+        auto depth_comp_msg = std::make_unique<sensor_msgs::msg::CompressedImage>();
+        depth_comp_msg->header = header;
+        depth_comp_msg->format = "png";
+        cv::imencode(".png", depth_16bit, depth_comp_msg->data, {cv::IMWRITE_PNG_COMPRESSION, 3});
+        depth_compressed_pub_->publish(std::move(depth_comp_msg));
+
         auto info_msg1 = std::make_unique<sensor_msgs::msg::CameraInfo>(static_info_);
         rgb_info_pub_->publish(std::move(info_msg1));
         
@@ -101,8 +116,10 @@ private:
     }
 
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr rgb_compressed_pub_;
     rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr rgb_info_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr depth_compressed_pub_;
     rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr depth_info_pub_;
     
     image_transport::Subscriber sub_;
