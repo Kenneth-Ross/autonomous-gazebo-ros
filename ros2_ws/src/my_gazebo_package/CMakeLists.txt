@@ -32,6 +32,7 @@ ament_python_install_package(my_gazebo_package_py)
 install(PROGRAMS
   my_gazebo_package_py/nodes/track_generator_node.py
   my_gazebo_package_py/nodes/driving_model_node.py
+  my_gazebo_package_py/nodes/random_drive_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -1,0 +1,19 @@
+digraph G {
+"base_link" -> "chassis"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis" -> "camera_base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_base_link" -> "camera_link_left"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_link_rgb" -> "camera_link_optical"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_base_link" -> "camera_link_rgb"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"camera_base_link" -> "camera_link_right"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"chassis" -> "imu_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"front_left_wheel_steering_link" -> "front_left_wheel"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+"chassis" -> "front_left_wheel_steering_link"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+"front_right_wheel_steering_link" -> "front_right_wheel"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+"chassis" -> "front_right_wheel_steering_link"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+"chassis" -> "rear_left_wheel"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+"chassis" -> "rear_right_wheel"[label=" Broadcaster: default_authority\nAverage rate: 21.111\nBuffer length: 0.9\nMost recent transform: 10.126\nOldest transform: 9.226\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1782877061.4017687"[ shape=plaintext ] ;
+}->"base_link";
+}
