@@ -161,6 +161,16 @@ def generate_launch_description():
             ],
             output='screen'
         ),
+        
+        # Bridge for all Gazebo ground truth poses (Car + Cones)
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='gt_pose_bridge',
+            arguments=['/world/default/pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
+            remappings=[('/world/default/pose/info', '/gazebo/pose_info')],
+            output='screen'
+        ),
 
         # Track Generator Node
         TimerAction(
@@ -184,6 +194,12 @@ def generate_launch_description():
                     package='my_gazebo_package',
                     executable='random_drive_node.py',
                     name='random_driver',
+                    output='screen'
+                ),
+                Node(
+                    package='my_gazebo_package',
+                    executable='validation_node.py',
+                    name='validation_node',
                     output='screen'
                 ),
 
