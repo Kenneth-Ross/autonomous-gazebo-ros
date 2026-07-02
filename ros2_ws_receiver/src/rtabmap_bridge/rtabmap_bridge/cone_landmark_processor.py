@@ -5,6 +5,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from vision_msgs.msg import Detection2DArray
 from rtabmap_msgs.msg import LandmarkDetections, LandmarkDetection
 from geometry_msgs.msg import PointStamped, Pose
+from visualization_msgs.msg import Marker, MarkerArray
 from cv_bridge import CvBridge
 import numpy as np
 import message_filters
@@ -60,6 +61,8 @@ class ConeLandmarkProcessor(Node):
         
         # Publisher for RTAB-Map Landmarks
         self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmark_detections', 10)
+        # Publisher for Foxglove Visualization
+        self.marker_pub = self.create_publisher(MarkerArray, '/yolo/landmark_markers', 10)
         self.get_logger().info("Cone Landmark Processor (Robust) initialized.")
 
     def info_callback(self, msg):
@@ -212,6 +215,53 @@ class ConeLandmarkProcessor(Node):
             
         if landmarks_msg.landmarks:
             self.landmark_pub.publish(landmarks_msg)
+
+        # Publish MarkerArray for Foxglove visualization
+        if self.landmarks:
+            marker_array = MarkerArray()
+            for lm in self.landmarks:
+                # The text marker
+                marker = Marker()
+                marker.header.frame_id = 'map'
+                marker.header.stamp = depth_msg.header.stamp
+                marker.ns = 'landmarks'
+                marker.id = lm['id']
+                marker.type = Marker.TEXT_VIEW_FACING
+                marker.action = Marker.ADD
+                marker.pose.position.x = float(lm['position'][0])
+                marker.pose.position.y = float(lm['position'][1])
+                marker.pose.position.z = float(lm['position'][2]) + 0.5 # Float slightly above
+                marker.pose.orientation.w = 1.0
+                marker.scale.z = 0.4 # Text size
+                marker.color.a = 1.0
+                marker.color.r = 1.0
+                marker.color.g = 1.0
+                marker.color.b = 0.0 # Yellow text
+                marker.text = f"{lm['class']}_{lm['id']}"
+                marker_array.markers.append(marker)
+                
+                # The shape marker (a cylinder for a cone)
+                shape = Marker()
+                shape.header.frame_id = 'map'
+                shape.header.stamp = depth_msg.header.stamp
+                shape.ns = 'landmarks_shapes'
+                shape.id = lm['id']
+                shape.type = Marker.CYLINDER
+                shape.action = Marker.ADD
+                shape.pose.position.x = float(lm['position'][0])
+                shape.pose.position.y = float(lm['position'][1])
+                shape.pose.position.z = float(lm['position'][2]) + 0.2
+                shape.pose.orientation.w = 1.0
+                shape.scale.x = 0.3
+                shape.scale.y = 0.3
+                shape.scale.z = 0.4
+                shape.color.a = 0.8
+                shape.color.r = 1.0
+                shape.color.g = 0.5
+                shape.color.b = 0.0 # Orange cone
+                marker_array.markers.append(shape)
+                
+            self.marker_pub.publish(marker_array)
 
 def main(args=None):
     rclpy.init(args=args)

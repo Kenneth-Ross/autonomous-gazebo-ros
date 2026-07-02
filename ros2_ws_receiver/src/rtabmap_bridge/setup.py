@@ -26,7 +26,8 @@ setup(
             'unpacker_node = rtabmap_bridge.unpacker_node:main',
             'ground_truth_broadcaster = rtabmap_bridge.ground_truth_broadcaster:main',
             'cone_landmark_processor = rtabmap_bridge.cone_landmark_processor:main',
-            'cone_detector_npu = rtabmap_bridge.cone_detector_npu:main'
+            'cone_detector_npu = rtabmap_bridge.cone_detector_npu:main',
+            'sensor_covariance_injector = rtabmap_bridge.sensor_covariance_injector:main'
         ],
     },
 )

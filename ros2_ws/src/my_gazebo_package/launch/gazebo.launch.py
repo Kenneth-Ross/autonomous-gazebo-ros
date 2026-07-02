@@ -181,7 +181,14 @@ def generate_launch_description():
                 #    parameters=[{'auto_drive': False}]
                 #),
                 ExecuteProcess(
-                    cmd=['ros2', 'topic', 'pub', '-r', '10', '/cmd_vel', 'geometry_msgs/msg/Twist', '{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.4}}'],
+                    cmd=['sh', '-c', 'ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 1.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.4}}" > /dev/null 2>&1'],
+                    output='log'
+                ),
+                Node(
+                    package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='imu_frame_fix',
+                    arguments=['0', '0', '0', '0', '0', '0', 'imu_link', 'ackermann_car/base_link/imu_sensor'],
                     output='screen'
                 )
             ]

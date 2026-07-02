@@ -102,7 +102,7 @@ def generate_launch_description():
                     '^/ground_truth/tf$',
                     '^/edge/camera/rgb/image_raw/compressed$',
                     '^/edge/camera/depth/image_raw/compressed$',
-                    '^/yolo/detections$'
+                    '^/yolo/.*'
                 ]
             }],
             output='screen'
@@ -253,6 +253,15 @@ def generate_launch_description():
             output='screen'
         )
 
+        # 11. Sensor Covariance Injector
+        sensor_injector_node = Node(
+            package='rtabmap_bridge',
+            executable='sensor_covariance_injector',
+            name='sensor_covariance_injector',
+            parameters=[{'use_sim_time': use_sim_time}],
+            output='screen'
+        )
+
         return [
             SetEnvironmentVariable(name='CYCLONEDDS_URI', value=uri),
             SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
@@ -261,6 +270,7 @@ def generate_launch_description():
             gt_broadcaster,
             static_tf_world_map,
             static_tf_camera,
+            sensor_injector_node,
             ekf_node,
             npu_detector_node,
             landmark_processor_node
