@@ -13,7 +13,6 @@
 class SimCameraEncoder : public rclcpp::Node {
 public:
     SimCameraEncoder() : Node("sim_camera_encoder"), frame_count_(0) {
-        rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
         // Create publisher for the combined super-frame with RELIABLE QoS
         // This is required because image_transport republish on the receiving end
         // defaults to RELIABLE and does not expose a parameter to override subscriber QoS.
