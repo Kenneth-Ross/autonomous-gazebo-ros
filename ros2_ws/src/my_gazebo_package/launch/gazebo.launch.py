@@ -167,8 +167,18 @@ def generate_launch_description():
             package='ros_gz_bridge',
             executable='parameter_bridge',
             name='gt_pose_bridge',
-            arguments=['/world/default/pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
-            remappings=[('/world/default/pose/info', '/gazebo/pose_info')],
+            arguments=['/world/default/dynamic_pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
+            remappings=[('/world/default/dynamic_pose/info', '/ground_truth/tf')],
+            output='screen'
+        ),
+        
+        # Bridge for specific Gazebo ground truth car pose
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='gt_car_pose_bridge',
+            arguments=['/model/ackermann_car/pose@geometry_msgs/msg/Pose[gz.msgs.Pose'],
+            remappings=[('/model/ackermann_car/pose', '/ground_truth/car_pose')],
             output='screen'
         ),
 

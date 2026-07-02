@@ -3,13 +3,14 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 from ros_gz_interfaces.srv import SpawnEntity, DeleteEntity
 from ros_gz_interfaces.msg import Entity
 from geometry_msgs.msg import Pose
+from visualization_msgs.msg import Marker, MarkerArray
 
 from my_gazebo_package.srv import ChangeTrack
 from my_gazebo_package_py.track_layouts import TRACK_LAYOUTS, CONE_MODEL_URI
@@ -30,6 +31,14 @@ class TrackGenerator(Node):
         self.delete_client = self.create_client(DeleteEntity, '/world/default/remove', callback_group=self.callback_group)
 
         self.track_change_service = self.create_service(ChangeTrack, 'change_track', self.change_track_callback, callback_group=self.callback_group)
+
+        latched_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_LAST
+        )
+        self.gt_cone_pub = self.create_publisher(MarkerArray, '/ground_truth/cones', latched_qos)
 
         self.spawned_cone_names = []
 
@@ -148,15 +157,51 @@ class TrackGenerator(Node):
             cone_name = f'outer_cone_{i}'
             if await self.spawn_entity_request(cone_name, x, y):
                 self.spawned_cone_names.append(cone_name)
+                
+        # Publish Ground Truth Cone Markers
+        self.publish_gt_markers(inner_cones, outer_cones)
 
         self.get_logger().info(f'Spawned {len(inner_cones) + len(outer_cones)} cones for track {track_name}')
         return True
+
+    def publish_gt_markers(self, inner_cones, outer_cones):
+        marker_array = MarkerArray()
+        
+        all_cones = inner_cones + outer_cones
+        for i, (x, y) in enumerate(all_cones):
+            marker = Marker()
+            marker.header.frame_id = 'world'
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = 'gt_cones'
+            marker.id = i
+            marker.type = Marker.CYLINDER
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(x)
+            marker.pose.position.y = float(y)
+            marker.pose.position.z = 0.25
+            marker.scale.x = 0.4
+            marker.scale.y = 0.4
+            marker.scale.z = 0.5
+            marker.color.a = 1.0
+            marker.color.r = 1.0
+            marker.color.g = 0.5
+            marker.color.b = 0.0
+            marker_array.markers.append(marker)
+            
+        self.gt_cone_pub.publish(marker_array)
 
     async def change_track_callback(self, request, response):
         self.get_logger().info(f'Received request to change track to: {request.track_name}')
 
         # Delete all currently spawned cones
         await self.delete_all_spawned_cones()
+        
+        # Clear GT markers
+        delete_array = MarkerArray()
+        delete_marker = Marker()
+        delete_marker.action = Marker.DELETEALL
+        delete_array.markers.append(delete_marker)
+        self.gt_cone_pub.publish(delete_array)
 
         # Spawn new track
         if await self.spawn_track(request.track_name):
