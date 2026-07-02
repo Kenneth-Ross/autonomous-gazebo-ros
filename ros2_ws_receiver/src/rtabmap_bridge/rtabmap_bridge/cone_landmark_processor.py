@@ -88,7 +88,8 @@ class ConeLandmarkProcessor(Node):
             p_transformed = tf2_geometry_msgs.do_transform_point(p, t)
             return np.array([p_transformed.point.x, p_transformed.point.y, p_transformed.point.z])
         except Exception as e:
-            # Silently return None on failure to avoid log spam on fast movement
+            # Throttle log to avoid spam, but still let us know if TF is broken
+            self.get_logger().error(f"TF Error ({from_frame} -> {to_frame}): {e}", throttle_duration_sec=2.0)
             return None
 
     def get_association_threshold(self, depth_m):
@@ -106,7 +107,9 @@ class ConeLandmarkProcessor(Node):
             cand['hits'] -= 1
         
         if not yolo_msg.detections:
-            self.candidates = [c for c in self.candidates if c['hits'] > 0]
+            self.candidates = [c for c in self.candidates if c['hits'] > -3]
+            # Always publish markers even if no detections in this frame
+            self.publish_markers()
             return
 
         # Parse Camera Intrinsics
@@ -244,58 +247,81 @@ class ConeLandmarkProcessor(Node):
                 
                 landmarks_msg.landmarks.append(lm_det)
                 
-        # Clean up dead candidates
-        self.candidates = [c for c in self.candidates if c['hits'] > 0]
+        # Clean up dead candidates that haven't been seen in several frames
+        self.candidates = [c for c in self.candidates if c['hits'] > -3]
             
         if landmarks_msg.landmarks:
             self.landmark_pub.publish(landmarks_msg)
-
-        # Publish MarkerArray for Foxglove visualization
-        if self.landmarks:
-            marker_array = MarkerArray()
-            for lm in self.landmarks:
-                # Text marker
-                marker = Marker()
-                marker.header.frame_id = 'map'
-                marker.header.stamp = depth_msg.header.stamp
-                marker.ns = 'landmarks'
-                marker.id = lm['id']
-                marker.type = Marker.TEXT_VIEW_FACING
-                marker.action = Marker.ADD
-                marker.pose.position.x = float(lm['position'][0])
-                marker.pose.position.y = float(lm['position'][1])
-                marker.pose.position.z = float(lm['position'][2]) + 0.5
-                marker.pose.orientation.w = 1.0
-                marker.scale.z = 0.4
-                marker.color.a = 1.0
-                marker.color.r = 1.0
-                marker.color.g = 1.0
-                marker.color.b = 0.0
-                marker.text = f"{lm['class']}_{lm['id']}"
-                marker_array.markers.append(marker)
-                
-                # Shape marker
-                shape = Marker()
-                shape.header.frame_id = 'map'
-                shape.header.stamp = depth_msg.header.stamp
-                shape.ns = 'landmarks_shapes'
-                shape.id = lm['id']
-                shape.type = Marker.CYLINDER
-                shape.action = Marker.ADD
-                shape.pose.position.x = float(lm['position'][0])
-                shape.pose.position.y = float(lm['position'][1])
-                shape.pose.position.z = float(lm['position'][2]) + 0.2
-                shape.pose.orientation.w = 1.0
-                shape.scale.x = 0.3
-                shape.scale.y = 0.3
-                shape.scale.z = 0.4
-                shape.color.a = 0.8
-                shape.color.r = 1.0
-                shape.color.g = 0.5
-                shape.color.b = 0.0
-                marker_array.markers.append(shape)
-                
-            self.marker_pub.publish(marker_array)
+            
+        self.publish_markers()
+            
+    def publish_markers(self):
+        # Always publish visualization markers so they don't flicker/disappear
+        marker_array = MarkerArray()
+        
+        # Add persistent landmarks (Green)
+        for lm in self.landmarks:
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = "persistent_cones"
+            marker.id = lm['id']
+            marker.type = Marker.CYLINDER
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(lm['position'][0])
+            marker.pose.position.y = float(lm['position'][1])
+            marker.pose.position.z = float(lm['position'][2])
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.4
+            marker.scale.y = 0.4
+            marker.scale.z = 0.6
+            marker.color.a = 1.0
+            marker.color.r = 1.0
+            marker.color.g = 0.5
+            marker.color.b = 0.0
+            marker_array.markers.append(marker)
+            
+            # Text label
+            text_marker = Marker()
+            text_marker.header = marker.header
+            text_marker.ns = "persistent_labels"
+            text_marker.id = lm['id'] + 1000
+            text_marker.type = Marker.TEXT_VIEW_FACING
+            text_marker.action = Marker.ADD
+            text_marker.pose.position.x = float(lm['position'][0])
+            text_marker.pose.position.y = float(lm['position'][1])
+            text_marker.pose.position.z = float(lm['position'][2]) + 0.8
+            text_marker.scale.z = 0.3
+            text_marker.color.a = 1.0
+            text_marker.color.r = 1.0
+            text_marker.color.g = 1.0
+            text_marker.color.b = 0.0
+            text_marker.text = f"{lm['class']} {lm['id']}"
+            marker_array.markers.append(text_marker)
+            
+        # Add candidates (Ghostly Red/Yellow)
+        for i, cand in enumerate(self.candidates):
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = "candidate_cones"
+            marker.id = i + 2000
+            marker.type = Marker.CYLINDER
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(cand['position'][0])
+            marker.pose.position.y = float(cand['position'][1])
+            marker.pose.position.z = float(cand['position'][2])
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 0.4
+            marker.scale.y = 0.4
+            marker.scale.z = 0.6
+            marker.color.a = 0.4  # Semi-transparent
+            marker.color.r = 1.0
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+            marker_array.markers.append(marker)
+            
+        self.marker_pub.publish(marker_array)
 
 def main(args=None):
     rclpy.init(args=args)
