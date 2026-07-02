@@ -38,10 +38,15 @@ class SensorCovarianceInjector(Node):
         self.get_logger().info('Sensor Covariance Injector started.')
 
     def odom_callback(self, msg: Odometry):
-        # Default all to large variance (untrusted)
-        msg.pose.covariance = [1e6] * 36
-        msg.twist.covariance = [1e6] * 36
+        # Initialize with zeros
+        msg.pose.covariance = [0.0] * 36
+        msg.twist.covariance = [0.0] * 36
         
+        # Set all diagonals to large variance (untrusted)
+        for i in [0, 7, 14, 21, 28, 35]:
+            msg.pose.covariance[i] = 1e6
+            msg.twist.covariance[i] = 1e6
+            
         # Inject Pose Covariance (Position X,Y: 0.05, Yaw: 0.1)
         msg.pose.covariance[0] = 0.05  # X
         msg.pose.covariance[7] = 0.05  # Y
@@ -55,11 +60,17 @@ class SensorCovarianceInjector(Node):
         self.odom_pub.publish(msg)
 
     def imu_callback(self, msg: Imu):
-        # Default all to large variance (untrusted)
-        msg.orientation_covariance = [1e6] * 9
-        msg.angular_velocity_covariance = [1e6] * 9
-        msg.linear_acceleration_covariance = [1e6] * 9
+        # Initialize with zeros
+        msg.orientation_covariance = [0.0] * 9
+        msg.angular_velocity_covariance = [0.0] * 9
+        msg.linear_acceleration_covariance = [0.0] * 9
         
+        # Set all diagonals to large variance (untrusted)
+        for i in [0, 4, 8]:
+            msg.orientation_covariance[i] = 1e6
+            msg.angular_velocity_covariance[i] = 1e6
+            msg.linear_acceleration_covariance[i] = 1e6
+            
         # Orientation Covariance (Yaw: 0.01)
         msg.orientation_covariance[8] = 0.01
         
