@@ -29,7 +29,7 @@ class ConeLandmarkProcessor(Node):
         # Candidate tracker (debouncing)
         # List of dicts: {'position': np.array([x, y, z]), 'class': str, 'hits': int}
         self.candidates = []
-        self.min_hits = 3
+        self.min_hits = 2
         
         self.next_landmark_id = 1
         
@@ -94,9 +94,9 @@ class ConeLandmarkProcessor(Node):
 
     def get_association_threshold(self, depth_m):
         # Tighter threshold for dense cone tracks to prevent cross-association
-        base_threshold = 0.5
-        depth_scaling = 0.04 * depth_m
-        return min(base_threshold + depth_scaling, 1.5)
+        base_threshold = 1.0
+        depth_scaling = 0.05 * depth_m
+        return min(base_threshold + depth_scaling, 2.0)
 
     def callback(self, depth_msg, yolo_msg):
         if self.camera_info is None:
