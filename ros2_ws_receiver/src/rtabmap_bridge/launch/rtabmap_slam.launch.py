@@ -165,8 +165,9 @@ def generate_launch_description():
                 'approx_sync_max_interval': 0.1,
                 'queue_size': 50,
                 'sync_queue_size': 50,
-                'Kp/MaxFeatures': '-1',
-                'Vis/MaxFeatures': '-1',
+                'Kp/MaxFeatures': '500',
+                'Vis/MaxFeatures': '500',
+                'Vis/MinInliers': '10000', # Impossible to reach, disables visual loop closures
                 'Mem/IncrementalMemory': 'true',
                 'RGBD/LinearUpdate': '0.1',
                 'RGBD/AngularUpdate': '0.1',

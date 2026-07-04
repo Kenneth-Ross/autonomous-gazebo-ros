@@ -198,10 +198,7 @@ class ConeLandmarkProcessor(Node):
             
             # Use EXACT stamp, wait up to 0.3s
             map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'map', stamp)
-            if map_pos is None:
-                # Discard detection if map transform isn't available yet to prevent frame mixing
-                continue
-                
+            
             class_id = "cone"
             if det.results:
                 class_id = det.results[0].hypothesis.class_id
