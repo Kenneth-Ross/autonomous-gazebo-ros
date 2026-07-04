@@ -192,18 +192,18 @@ def generate_launch_description():
                 #    output='screen',
                 #    parameters=[{'auto_drive': False}]
                 #),
-                Node(
-                    package='my_gazebo_package',
-                    executable='random_drive_node.py',
-                    name='random_driver',
-                    output='screen'
-                ),
-                Node(
-                    package='my_gazebo_package',
-                    executable='validation_node.py',
-                    name='validation_node',
-                    output='screen'
-                ),
+                #Node(
+                #    package='my_gazebo_package',
+                #    executable='random_drive_node.py',
+                #    name='random_driver',
+                #    output='screen'
+                #),
+                #Node(
+                #    package='my_gazebo_package',
+                #    executable='validation_node.py',
+                #    name='validation_node',
+                #    output='screen'
+                #),
 
                 Node(
                     package='tf2_ros',

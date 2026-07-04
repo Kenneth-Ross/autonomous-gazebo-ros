@@ -22,6 +22,7 @@ find_package(geometry_msgs REQUIRED)
 # Define interfaces - This now ONLY uses the generators we explicitly found
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/ChangeTrack.srv"
+  "srv/StartRun.srv"
   DEPENDENCIES geometry_msgs
 )
 

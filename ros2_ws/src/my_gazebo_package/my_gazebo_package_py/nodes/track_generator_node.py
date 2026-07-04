@@ -137,11 +137,14 @@ class TrackGenerator(Node):
             return False
 
     async def spawn_track(self, track_name):
+        spawn_pose = {"x": 0.0, "y": 0.0, "yaw": 0.0}
         if track_name == 'random':
-            inner_cones, outer_cones = generate_random_track()
+            inner_cones, outer_cones, spawn_pose = generate_random_track()
         elif track_name in TRACK_LAYOUTS:
-            path = TRACK_LAYOUTS[track_name]
-            inner_cones, outer_cones = calculate_boundaries(path)
+            path = TRACK_LAYOUTS[track_name]["points"]
+            spawn_pose = TRACK_LAYOUTS[track_name]["spawn"]
+            sample_dist = TRACK_LAYOUTS[track_name].get("sample_dist", 1.0)
+            inner_cones, outer_cones = calculate_boundaries(path, sample_dist=sample_dist)
         else:
             self.get_logger().error(f'Unknown track layout: {track_name}')
             return False

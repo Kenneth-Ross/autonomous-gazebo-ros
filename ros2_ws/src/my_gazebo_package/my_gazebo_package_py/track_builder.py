@@ -94,8 +94,16 @@ def generate_random_track(num_points=12, radius_min=15, radius_max=30, track_wid
     y = radii * np.sin(angles)
     
     points = list(zip(x, y))
-    return calculate_boundaries(points, track_width=track_width, sample_dist=sample_dist, closed=True)
+    inner_cones, outer_cones = calculate_boundaries(points, track_width=track_width, sample_dist=sample_dist, closed=True)
+    
+    # Compute spawn: start on the centerline, pointing towards the next point
+    p0 = np.array(points[0])
+    p1 = np.array(points[1])
+    heading = float(np.arctan2(p1[1] - p0[1], p1[0] - p0[0]))
+    spawn = {"x": float(p0[0]), "y": float(p0[1]), "yaw": heading}
+    
+    return inner_cones, outer_cones, spawn
 
 if __name__ == "__main__":
-    inner, outer = generate_random_track()
-    print(f"Generated {len(inner)} inner cones and {len(outer)} outer cones.")
+    inner, outer, spawn = generate_random_track()
+    print(f"Generated {len(inner)} inner cones and {len(outer)} outer cones. Spawn: {spawn}")

@@ -1,0 +1,7 @@
+string track_name
+int32 random_seed
+float32 target_speed
+float32 lookahead
+---
+bool success
+string message
