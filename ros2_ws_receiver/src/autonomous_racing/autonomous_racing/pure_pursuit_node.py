@@ -12,7 +12,7 @@ class PurePursuitNode(Node):
         # Params
         self.declare_parameter('lookahead_distance', 3.0)
         self.declare_parameter('lookahead_gain', 0.5)
-        self.declare_parameter('target_speed', 2.0)
+        self.declare_parameter('target_speed', 5.0)
         self.declare_parameter('min_lookahead', 1.5)
         self.declare_parameter('max_lookahead', 8.0)
         self.declare_parameter('wheelbase', 1.0)
@@ -46,10 +46,10 @@ class PurePursuitNode(Node):
         cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
         return math.atan2(siny_cosp, cosy_cosp)
 
-    def get_distance(self, p1, p2):
-        return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+    def get_distance(self, x1, y1, x2, y2):
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
-    def find_goal_point(self, lookahead):
+    def find_goal_point(self, lookahead, car_x, car_y):
         if not self.path or not self.path.poses:
             return None
             
@@ -57,7 +57,7 @@ class PurePursuitNode(Node):
         min_dist = float('inf')
         closest_idx = 0
         for i, pose_stamped in enumerate(self.path.poses):
-            d = self.get_distance(self.current_pose.position, pose_stamped.pose.position)
+            d = self.get_distance(car_x, car_y, pose_stamped.pose.position.x, pose_stamped.pose.position.y)
             if d < min_dist:
                 min_dist = d
                 closest_idx = i
@@ -65,7 +65,7 @@ class PurePursuitNode(Node):
         # From closest point, search forward for the point that is 'lookahead' away
         goal_point = None
         for i in range(closest_idx, len(self.path.poses)):
-            d = self.get_distance(self.current_pose.position, self.path.poses[i].pose.position)
+            d = self.get_distance(car_x, car_y, self.path.poses[i].pose.position.x, self.path.poses[i].pose.position.y)
             if d >= lookahead:
                 goal_point = self.path.poses[i].pose.position
                 break
@@ -89,15 +89,18 @@ class PurePursuitNode(Node):
 
         lookahead = max(min_lookahead, min(max_lookahead, lookahead_base + lookahead_gain * abs(self.current_velocity)))
         
-        goal_point = self.find_goal_point(lookahead)
+        is_local = (self.path.header.frame_id == 'base_link' or self.path.header.frame_id == 'ackermann_car')
+        car_x = 0.0 if is_local else self.current_pose.position.x
+        car_y = 0.0 if is_local else self.current_pose.position.y
+        car_yaw = 0.0 if is_local else self.get_yaw_from_pose(self.current_pose)
+        
+        goal_point = self.find_goal_point(lookahead, car_x, car_y)
         if not goal_point:
             return
-
-        car_yaw = self.get_yaw_from_pose(self.current_pose)
         
         # Transform goal point to vehicle frame to get alpha
-        dx = goal_point.x - self.current_pose.position.x
-        dy = goal_point.y - self.current_pose.position.y
+        dx = goal_point.x - car_x
+        dy = goal_point.y - car_y
         
         # alpha is angle to goal in vehicle frame
         alpha = math.atan2(dy, dx) - car_yaw

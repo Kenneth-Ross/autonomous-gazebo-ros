@@ -20,7 +20,7 @@ def generate_launch_description():
     
     target_speed_arg = DeclareLaunchArgument(
         'target_speed',
-        default_value='2.0',
+        default_value='5.0',
         description='Target racing speed in m/s'
     )
     
