@@ -5,11 +5,14 @@ from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.conditions import UnlessCondition
+from launch.conditions import UnlessCondition, IfCondition
 
 def generate_launch_description():
     my_gazebo_pkg_share = get_package_share_directory('my_gazebo_package')
     gazebo_launch = os.path.join(my_gazebo_pkg_share, 'launch', 'gazebo.launch.py')
+    
+    sender_pkg_share = get_package_share_directory('gazebo_oakd_stream_sender')
+    stream_launch = os.path.join(sender_pkg_share, 'launch', 'stream_to_remote.launch.py')
     
     # We can pass initial_track argument down to gazebo.launch.py
     initial_track_arg = DeclareLaunchArgument(
@@ -46,6 +49,12 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gazebo_launch),
             launch_arguments={'initial_track': LaunchConfiguration('initial_track')}.items(),
+        ),
+        
+        # Stream Camera to Edge (UDP)
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(stream_launch),
+            condition=IfCondition(LaunchConfiguration('run_edge'))
         ),
         
         # Driving Model (PID control on velocity)
