@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
 from vision_msgs.msg import Detection2DArray
 from rtabmap_msgs.msg import LandmarkDetections, LandmarkDetection
 from geometry_msgs.msg import PointStamped, Pose
 from visualization_msgs.msg import Marker, MarkerArray
 from cv_bridge import CvBridge
 import numpy as np
+import cv2
 import message_filters
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from tf2_ros import Buffer, TransformListener
@@ -50,7 +51,9 @@ class ConeLandmarkProcessor(Node):
             pipeline_qos
         )
         
-        # Subscribe to Depth and YOLO Detections using message_filters
+        self.rgb_sub = message_filters.Subscriber(
+            self, CompressedImage, '/edge/camera/rgb/image_raw/compressed', qos_profile=pipeline_qos
+        )
         self.depth_sub = message_filters.Subscriber(
             self, Image, '/edge/camera/depth/image_raw', qos_profile=pipeline_qos
         )
@@ -60,7 +63,7 @@ class ConeLandmarkProcessor(Node):
         
         # Approximate time synchronizer (100ms slop to handle network jitter)
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.depth_sub, self.yolo_sub], queue_size=10, slop=0.1
+            [self.rgb_sub, self.depth_sub, self.yolo_sub], queue_size=10, slop=0.1
         )
         self.ts.registerCallback(self.callback)
         
@@ -68,6 +71,7 @@ class ConeLandmarkProcessor(Node):
         self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmark_detections', 10)
         # Publisher for Foxglove Visualization
         self.marker_pub = self.create_publisher(MarkerArray, '/yolo/landmark_markers', 10)
+        self.annotated_pub = self.create_publisher(CompressedImage, '/yolo/annotated/compressed', 10)
         self.get_logger().info("Cone Landmark Processor (Robust Tracker) initialized.")
 
     def info_callback(self, msg):
@@ -98,9 +102,17 @@ class ConeLandmarkProcessor(Node):
         depth_scaling = 0.05 * depth_m
         return min(base_threshold + depth_scaling, 2.0)
 
-    def callback(self, depth_msg, yolo_msg):
+    def callback(self, rgb_msg, depth_msg, yolo_msg):
         if self.camera_info is None:
             self.get_logger().warn("Waiting for camera_info...")
+            return
+            
+        # Decode RGB image for annotation
+        try:
+            np_arr = np.frombuffer(rgb_msg.data, np.uint8)
+            cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        except Exception as e:
+            self.get_logger().error(f"Failed to decode RGB image: {e}")
             return
             
         # Decay all candidate hits (simulating temporal loss)
@@ -111,6 +123,9 @@ class ConeLandmarkProcessor(Node):
             self.candidates = [c for c in self.candidates if c['hits'] > -3]
             # Always publish markers even if no detections in this frame
             self.publish_markers()
+            
+            # Publish unannotated image so stream doesn't freeze
+            self.annotated_pub.publish(rgb_msg)
             return
 
         # Parse Camera Intrinsics
@@ -260,6 +275,19 @@ class ConeLandmarkProcessor(Node):
                 
                 landmarks_msg.landmarks.append(lm_det)
                 
+            # Draw annotation on image
+            x1 = int(u_center - size_x / 2)
+            y1 = int(v_center - size_y / 2)
+            x2 = int(u_center + size_x / 2)
+            y2 = int(v_center + size_y / 2)
+            
+            score = det.results[0].hypothesis.score if det.results else 0.0
+            
+            # Big text: Cone, Score, and Depth
+            label = f"Cone: {score:.2f} | D: {z_m:.1f}m"
+            cv2.rectangle(cv_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+            cv2.putText(cv_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
+                
         # Clean up dead candidates that haven't been seen in several frames
         self.candidates = [c for c in self.candidates if c['hits'] > -3]
             
@@ -267,6 +295,15 @@ class ConeLandmarkProcessor(Node):
             self.landmark_pub.publish(landmarks_msg)
             
         self.publish_markers()
+        
+        # Publish annotated image
+        success, compressed_data = cv2.imencode('.jpg', cv_img)
+        if success:
+            annotated_msg = CompressedImage()
+            annotated_msg.header = rgb_msg.header
+            annotated_msg.format = 'jpeg'
+            annotated_msg.data = compressed_data.tobytes()
+            self.annotated_pub.publish(annotated_msg)
             
     def publish_markers(self):
         # Always publish visualization markers so they don't flicker/disappear
