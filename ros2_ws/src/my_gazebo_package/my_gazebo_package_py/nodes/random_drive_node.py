@@ -12,23 +12,23 @@ class RandomDriveNode(Node):
         self.timer = self.create_timer(2.0, self.timer_callback)
         self.get_logger().info('Random Drive Node started. Will change steering every 2s.')
         self.twist = Twist()
-        self.twist.linear.x = 2.0  # Constant forward speed
+        self.twist.linear.x = 4.0  # Constant forward speed (Doubled)
 
     def timer_callback(self):
-        # Base circular steering (e.g., turning left at 0.3 rad/s)
-        base_steering = 0.3
+        # Base circular steering (e.g., turning left at 0.6 rad/s to match 2x speed)
+        base_steering = 0.6
         
         # Add random noise to the steering to make it wander slightly while circling
-        # Noise between -0.15 and +0.15
-        noise = random.uniform(-0.15, 0.15)
+        # Noise between -0.3 and +0.3
+        noise = random.uniform(-0.3, 0.3)
         
         self.twist.angular.z = base_steering + noise
         
         # Occasional tight turns or wide turns
         if random.random() < 0.2:
-            self.twist.angular.z = random.uniform(0.4, 0.6) # Tight turn
+            self.twist.angular.z = random.uniform(0.8, 1.2) # Tight turn
         elif random.random() < 0.1:
-            self.twist.angular.z = random.uniform(-0.1, 0.1) # Briefly go straight/right
+            self.twist.angular.z = random.uniform(-0.2, 0.2) # Briefly go straight/right
             
         self.get_logger().info(f'Publishing random cmd_vel: {self.twist.angular.z:.2f} rad/s')
         
