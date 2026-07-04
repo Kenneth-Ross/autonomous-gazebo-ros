@@ -77,24 +77,7 @@ class ConeLandmarkProcessor(Node):
     def info_callback(self, msg):
         self.camera_info = msg
 
-    def transform_point(self, x, y, z, from_frame, to_frame, stamp):
-        p = PointStamped()
-        p.header.frame_id = from_frame
-        p.header.stamp = stamp
-        p.point.x = float(x)
-        p.point.y = float(y)
-        p.point.z = float(z)
-        try:
-            # Lookup transform with a 0.3s timeout for network jitter
-            t = self.tf_buffer.lookup_transform(
-                to_frame, from_frame, stamp, rclpy.duration.Duration(seconds=0.3)
-            )
-            p_transformed = tf2_geometry_msgs.do_transform_point(p, t)
-            return np.array([p_transformed.point.x, p_transformed.point.y, p_transformed.point.z])
-        except Exception as e:
-            # Throttle log to avoid spam, but still let us know if TF is broken
-            self.get_logger().error(f"TF Error ({from_frame} -> {to_frame}): {e}", throttle_duration_sec=2.0)
-            return None
+
 
     def get_association_threshold(self, depth_m):
         # Tighter threshold for dense cone tracks to prevent cross-association
@@ -154,6 +137,16 @@ class ConeLandmarkProcessor(Node):
         landmarks_msg = LandmarkDetections()
         landmarks_msg.header = depth_msg.header
         stamp = depth_msg.header.stamp
+        
+        try:
+            # Check if map transform is available ONCE per frame to prevent compounding timeouts
+            # This fixes the massive lag spike on the first frame if map -> odom is delayed
+            t_map = self.tf_buffer.lookup_transform(
+                'map', depth_msg.header.frame_id, stamp, rclpy.duration.Duration(seconds=0.1)
+            )
+        except Exception as e:
+            self.get_logger().warn(f"Map transform not yet available: {e}", throttle_duration_sec=2.0)
+            t_map = None
 
         for det in yolo_msg.detections:
             u_center = det.bbox.center.position.x
@@ -196,8 +189,17 @@ class ConeLandmarkProcessor(Node):
             y_c = ((v_center - cy) * z_m) / fy
             z_c = z_m
             
-            # Use EXACT stamp, wait up to 0.3s
-            map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'map', stamp)
+            if t_map is not None:
+                p = PointStamped()
+                p.header.frame_id = depth_msg.header.frame_id
+                p.header.stamp = stamp
+                p.point.x = float(x_c)
+                p.point.y = float(y_c)
+                p.point.z = float(z_c)
+                p_transformed = tf2_geometry_msgs.do_transform_point(p, t_map)
+                map_pos = np.array([p_transformed.point.x, p_transformed.point.y, p_transformed.point.z])
+            else:
+                map_pos = None
             
             class_id = "cone"
             if det.results:
