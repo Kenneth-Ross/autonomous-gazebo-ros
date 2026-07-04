@@ -19,7 +19,7 @@ def generate_launch_description():
         # Horizontal Super-Frame Stitcher
         Node(
             package='gazebo_oakd_stream_sender',
-            executable='combined_streamer.py',
+            executable='combined_streamer',
             name='combined_streamer',
             remappings=[
                 ('~/super_frame_local', '/oakd/super_frame/image_raw')
