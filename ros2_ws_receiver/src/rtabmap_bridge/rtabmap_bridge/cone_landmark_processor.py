@@ -286,10 +286,11 @@ class ConeLandmarkProcessor(Node):
                 x2 = int(u_center + size_x / 2)
                 y2 = int(v_center + size_y / 2)
                 
-                score = det.results[0].hypothesis.score if det.results else 0.0
-                
-                # Big text: Cone, Score, and Depth
-                label = f"Cone: {score:.2f} | D: {z_m:.1f}m"
+                if landmark_id != -1:
+                    label = f"ID {landmark_id}: {z_m:.1f} (m)"
+                else:
+                    label = f"ID ?: {z_m:.1f} (m)"
+                    
                 cv2.rectangle(cv_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
                 cv2.putText(cv_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
                 
