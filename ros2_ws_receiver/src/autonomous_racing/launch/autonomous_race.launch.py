@@ -4,7 +4,8 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.conditions import UnlessCondition
 
 def generate_launch_description():
     my_gazebo_pkg_share = get_package_share_directory('my_gazebo_package')
@@ -28,11 +29,18 @@ def generate_launch_description():
         default_value='3.0',
         description='Pure pursuit lookahead distance'
     )
+    
+    run_edge_arg = DeclareLaunchArgument(
+        'run_edge',
+        default_value='false',
+        description='Set to true if running pure pursuit and midline on Orange Pi'
+    )
 
     return LaunchDescription([
         initial_track_arg,
         target_speed_arg,
         lookahead_arg,
+        run_edge_arg,
         
         # Base simulation (Gazebo, car URDF, bridges, track_generator)
         IncludeLaunchDescription(
@@ -55,6 +63,7 @@ def generate_launch_description():
             executable='pure_pursuit_node',
             name='pure_pursuit_node',
             output='screen',
+            condition=UnlessCondition(LaunchConfiguration('run_edge')),
             parameters=[{
                 'target_speed': LaunchConfiguration('target_speed'),
                 'lookahead_distance': LaunchConfiguration('lookahead')
@@ -79,6 +88,7 @@ def generate_launch_description():
             package='autonomous_racing',
             executable='reactive_midline_node',
             name='reactive_midline_node',
+            condition=UnlessCondition(LaunchConfiguration('run_edge')),
             output='screen'
         ),
         
