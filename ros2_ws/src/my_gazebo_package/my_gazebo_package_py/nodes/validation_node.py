@@ -19,9 +19,11 @@ class ValidationNode(Node):
         
         # Ground truth states
         self.gt_cones = {} # {id: (x, y)}
+        self.gt_car_pose = None
         
         # Estimated states
         self.est_cones = {} # {id: (x, y)}
+        self.est_car_pose = None
         
         latched_qos = QoSProfile(
             depth=1,
@@ -31,7 +33,7 @@ class ValidationNode(Node):
         )
         
         # Subscriptions
-        self.create_subscription(Pose, '/ground_truth/car_pose', self.gt_car_cb, 10)
+        self.create_subscription(TFMessage, '/ground_truth/tf', self.gt_tf_cb, 10)
         self.create_subscription(MarkerArray, '/ground_truth/cones', self.gt_cones_cb, latched_qos)
         self.create_subscription(Odometry, '/odometry/filtered', self.est_odom_cb, 10)
         self.create_subscription(MarkerArray, '/yolo/landmark_markers', self.est_markers_cb, 10)
@@ -39,8 +41,10 @@ class ValidationNode(Node):
         self.timer = self.create_timer(2.0, self.print_validation_stats)
         self.get_logger().info('Validation node started. Waiting for data...')
 
-    def gt_car_cb(self, msg):
-        self.gt_car_pose = (msg.position.x, msg.position.y)
+    def gt_tf_cb(self, msg):
+        for transform in msg.transforms:
+            if transform.child_frame_id in ('ackermann_car', 'my_robot'):
+                self.gt_car_pose = (transform.transform.translation.x, transform.transform.translation.y)
 
     def gt_cones_cb(self, msg):
         for marker in msg.markers:

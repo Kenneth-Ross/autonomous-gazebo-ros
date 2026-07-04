@@ -172,15 +172,7 @@ def generate_launch_description():
             output='screen'
         ),
         
-        # Bridge for specific Gazebo ground truth car pose
-        Node(
-            package='ros_gz_bridge',
-            executable='parameter_bridge',
-            name='gt_car_pose_bridge',
-            arguments=['/model/ackermann_car/pose@geometry_msgs/msg/Pose[gz.msgs.Pose'],
-            remappings=[('/model/ackermann_car/pose', '/ground_truth/car_pose')],
-            output='screen'
-        ),
+
 
         # Track Generator Node
         TimerAction(
