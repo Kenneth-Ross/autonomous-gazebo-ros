@@ -189,8 +189,11 @@ class ConeLandmarkProcessor(Node):
             phys_w = (size_x * z_m) / fx
             phys_h = (size_y * z_m) / fy
             
-            # Formula Student cones: ~0.2m - 0.3m wide, ~0.3m - 0.5m tall
-            # Generous margins to allow partial clipping at long range
+            # TODO(Real-World Transition): These bounds are extremely loose (0.1m to 1.2m tall) 
+            # to accommodate the large 0.75m Gazebo simulation cones as well as YOLO slop.
+            # When deploying to the physical car with uniform FSE cones (~0.325m tall), 
+            # these bounds MUST be tightened (e.g. 0.15 < phys_h < 0.5) to aggressively 
+            # reject false positives like people or poles.
             if not (0.05 < phys_w < 0.8 and 0.1 < phys_h < 1.2):
                 continue
                 
