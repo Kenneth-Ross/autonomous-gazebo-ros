@@ -16,6 +16,17 @@ def generate_launch_description():
         SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
         SetEnvironmentVariable(name='CYCLONEDDS_URI', value=cyclonedds_config),
         
+        # Horizontal Super-Frame Stitcher
+        Node(
+            package='gazebo_oakd_stream_sender',
+            executable='combined_streamer.py',
+            name='combined_streamer',
+            remappings=[
+                ('~/super_frame_local', '/oakd/super_frame/image_raw')
+            ],
+            output='screen'
+        ),
+        
         # Combined Camera Encoder Node
         Node(
             package='sim_camera_encoder',

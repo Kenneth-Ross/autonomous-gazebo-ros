@@ -113,6 +113,32 @@ def generate_launch_description():
             ],
             output='screen'
         ),
+        
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='rgb_bridge',
+            arguments=[
+                '/oakd/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            ],
+            remappings=[
+                ('/oakd/rgbd_camera/image', '/sim/camera/rgb/image_raw'),
+            ],
+            output='screen'
+        ),
+        
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='depth_bridge',
+            arguments=[
+                '/oakd/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image',
+            ],
+            remappings=[
+                ('/oakd/rgbd_camera/depth_image', '/sim/camera/depth/image_raw'),
+            ],
+            output='screen'
+        ),
 
         # Bridge for odom
         Node(
