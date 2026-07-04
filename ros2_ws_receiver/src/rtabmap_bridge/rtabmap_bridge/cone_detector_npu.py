@@ -67,6 +67,7 @@ class ConeDetectorNPUNode(Node):
         
         # Publisher for detections
         self.det_pub = self.create_publisher(Detection2DArray, '/yolo/detections', 10)
+        self.annotated_pub = self.create_publisher(CompressedImage, '/yolo/annotated/compressed', 10)
         
         # Subscriptions
         self.img_sub = self.create_subscription(
@@ -187,7 +188,20 @@ class ConeDetectorNPUNode(Node):
                 
                 det_array_msg.detections.append(det)
                 
+                # Draw on image
+                cv2.rectangle(cv_img, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 2)
+                cv2.putText(cv_img, f"cone: {score:.2f}", (box[0], box[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
         self.det_pub.publish(det_array_msg)
+        
+        # Publish annotated image
+        success, compressed_data = cv2.imencode('.jpg', cv_img)
+        if success:
+            annotated_msg = CompressedImage()
+            annotated_msg.header = msg.header
+            annotated_msg.format = 'jpeg'
+            annotated_msg.data = compressed_data.tobytes()
+            self.annotated_pub.publish(annotated_msg)
 
     def __del__(self):
         if hasattr(self, 'rknn') and self.rknn is not None:
