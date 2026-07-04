@@ -284,9 +284,9 @@ class ConeLandmarkProcessor(Node):
                 y2 = int(v_center + size_y / 2)
                 
                 if landmark_id != -1:
-                    label = f"ID {landmark_id}: {z_m:.1f} (m)"
+                    label = f"{landmark_id}: {z_m:.1f}m"
                 else:
-                    label = f"ID ?: {z_m:.1f} (m)"
+                    label = f"?: {z_m:.1f}m"
                     
                 cv2.rectangle(cv_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
                 cv2.putText(cv_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
