@@ -80,10 +80,10 @@ class ConeLandmarkProcessor(Node):
 
 
     def get_association_threshold(self, depth_m):
-        # Tighter threshold for dense cone tracks to prevent cross-association
-        base_threshold = 1.0
+        # Increased threshold to aggressively swallow the 1.14m average odometry drift
+        base_threshold = 2.5
         depth_scaling = 0.05 * depth_m
-        return min(base_threshold + depth_scaling, 2.0)
+        return min(base_threshold + depth_scaling, 3.5)
 
     def callback(self, rgb_msg, depth_msg, yolo_msg):
         if self.camera_info is None:
@@ -250,12 +250,15 @@ class ConeLandmarkProcessor(Node):
                         else:
                             landmark_id = -1 # Not ready yet
                     else:
-                        # Create new candidate
-                        self.candidates.append({
-                            'position': map_pos,
-                            'class': class_id,
-                            'hits': 1
-                        })
+                        # Dynamic Depth Gating: Only initialize NEW cone candidates if they are within 6.0 meters.
+                        # This prevents extremely noisy depth measurements at 15m from spawning false duplicates,
+                        # while still allowing us to track existing cones up to 20m.
+                        if z_m < 6.0:
+                            self.candidates.append({
+                                'position': map_pos,
+                                'class': class_id,
+                                'hits': 1
+                            })
                         landmark_id = -1
             else:
                 landmark_id = -1
