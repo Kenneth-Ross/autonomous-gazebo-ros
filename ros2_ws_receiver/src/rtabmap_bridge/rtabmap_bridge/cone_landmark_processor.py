@@ -93,9 +93,10 @@ class ConeLandmarkProcessor(Node):
             return None
 
     def get_association_threshold(self, depth_m):
+        # Tighter threshold for dense cone tracks to prevent cross-association
         base_threshold = 0.5
-        depth_scaling = 0.04 * depth_m * depth_m
-        return min(base_threshold + depth_scaling, 2.5)
+        depth_scaling = 0.04 * depth_m
+        return min(base_threshold + depth_scaling, 1.5)
 
     def callback(self, depth_msg, yolo_msg):
         if self.camera_info is None:
@@ -141,13 +142,14 @@ class ConeLandmarkProcessor(Node):
             size_x = det.bbox.size_x
             size_y = det.bbox.size_y
             
-            window_size = 5
-            half_w = window_size // 2
+            # Use inner 50% of bbox to avoid edge artifacts
+            roi_w = max(5, int(size_x * 0.5))
+            roi_h = max(5, int(size_y * 0.5))
             
-            y_start = max(0, int(v_center - half_w))
-            y_end = min(h, int(v_center + half_w + 1))
-            x_start = max(0, int(u_center - half_w))
-            x_end = min(w, int(u_center + half_w + 1))
+            y_start = max(0, int(v_center - roi_h // 2))
+            y_end = min(h, int(v_center + roi_h // 2 + 1))
+            x_start = max(0, int(u_center - roi_w // 2))
+            x_end = min(w, int(u_center + roi_w // 2 + 1))
             
             roi = depth_img[y_start:y_end, x_start:x_end]
             valid_mask = (roi > 0) & (~np.isnan(roi))
@@ -155,7 +157,17 @@ class ConeLandmarkProcessor(Node):
                 continue
                 
             # 25th percentile depth (avoid background)
-            z_m = np.percentile(roi[valid_mask], 25) / 1000.0
+            raw_z = np.percentile(roi[valid_mask], 25)
+            z_m = raw_z / 1000.0
+            
+            # Temporary logging to verify depth units (if raw_z is e.g. < 15, it's already in meters!)
+            if hasattr(self, 'debug_count'):
+                self.debug_count += 1
+            else:
+                self.debug_count = 0
+                
+            if self.debug_count % 30 == 0:
+                self.get_logger().info(f"Depth check: raw_z={raw_z:.1f}, scaled z_m={z_m:.3f}m")
             
             # Max range cutoff (stereo depth too noisy beyond this)
             if z_m > 6.0:
@@ -168,7 +180,8 @@ class ConeLandmarkProcessor(Node):
             # Use EXACT stamp, wait up to 0.3s
             map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'map', stamp)
             if map_pos is None:
-                map_pos = self.transform_point(x_c, y_c, z_c, depth_msg.header.frame_id, 'odom', stamp)
+                # Discard detection if map transform isn't available yet to prevent frame mixing
+                continue
                 
             class_id = "cone"
             if det.results:
@@ -189,7 +202,7 @@ class ConeLandmarkProcessor(Node):
                             matched_lm = lm
                 
                 if matched_lm is not None:
-                    matched_lm['position'] = 0.9 * matched_lm['position'] + 0.1 * map_pos
+                    # Do NOT update position of persistent landmarks to prevent drift from odom errors
                     landmark_id = matched_lm['id']
                 else:
                     # Check candidates
