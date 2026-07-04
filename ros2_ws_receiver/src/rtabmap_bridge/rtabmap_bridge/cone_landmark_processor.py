@@ -184,6 +184,18 @@ class ConeLandmarkProcessor(Node):
             # Max range cutoff (increased for simulation, real OAK-D gets noisy past 6-8m)
             if z_m > 20.0:
                 continue
+                
+            # Geometric Consistency Filter
+            phys_w = (size_x * z_m) / fx
+            phys_h = (size_y * z_m) / fy
+            
+            # Formula Student cones: ~0.2m - 0.3m wide, ~0.3m - 0.5m tall
+            # Generous margins to allow partial clipping at long range
+            if not (0.05 < phys_w < 0.8 and 0.1 < phys_h < 1.2):
+                continue
+                
+            if phys_w > phys_h * 1.5:
+                continue
             
             x_c = ((u_center - cx) * z_m) / fx
             y_c = ((v_center - cy) * z_m) / fy
@@ -250,10 +262,10 @@ class ConeLandmarkProcessor(Node):
                         else:
                             landmark_id = -1 # Not ready yet
                     else:
-                        # Dynamic Depth Gating: Only initialize NEW cone candidates if they are within 6.0 meters.
-                        # This prevents extremely noisy depth measurements at 15m from spawning false duplicates,
+                        # Dynamic Depth Gating: Only initialize NEW cone candidates if they are within 12.0 meters.
+                        # This prevents extremely noisy depth measurements at 15m+ from spawning false duplicates,
                         # while still allowing us to track existing cones up to 20m.
-                        if z_m < 6.0:
+                        if z_m < 12.0:
                             self.candidates.append({
                                 'position': map_pos,
                                 'class': class_id,
