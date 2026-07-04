@@ -169,8 +169,8 @@ class ConeLandmarkProcessor(Node):
             if self.debug_count % 30 == 0:
                 self.get_logger().info(f"Depth check: raw_z={raw_z:.1f}, scaled z_m={z_m:.3f}m")
             
-            # Max range cutoff (stereo depth too noisy beyond this)
-            if z_m > 6.0:
+            # Max range cutoff (increased for simulation, real OAK-D gets noisy past 6-8m)
+            if z_m > 20.0:
                 continue
             
             x_c = ((u_center - cx) * z_m) / fx
