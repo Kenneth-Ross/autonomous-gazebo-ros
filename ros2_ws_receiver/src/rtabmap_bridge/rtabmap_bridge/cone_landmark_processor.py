@@ -107,13 +107,16 @@ class ConeLandmarkProcessor(Node):
             self.get_logger().warn("Waiting for camera_info...")
             return
             
-        # Decode RGB image for annotation
-        try:
-            np_arr = np.frombuffer(rgb_msg.data, np.uint8)
-            cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        except Exception as e:
-            self.get_logger().error(f"Failed to decode RGB image: {e}")
-            return
+        # Check if anyone is actually subscribing to the annotated image topic to save CPU
+        if self.annotated_pub.get_subscription_count() > 0:
+            try:
+                np_arr = np.frombuffer(rgb_msg.data, np.uint8)
+                cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            except Exception as e:
+                self.get_logger().error(f"Failed to decode RGB image: {e}")
+                cv_img = None
+        else:
+            cv_img = None
             
         # Decay all candidate hits (simulating temporal loss)
         for cand in self.candidates:
@@ -124,8 +127,9 @@ class ConeLandmarkProcessor(Node):
             # Always publish markers even if no detections in this frame
             self.publish_markers()
             
-            # Publish unannotated image so stream doesn't freeze
-            self.annotated_pub.publish(rgb_msg)
+            # Publish unannotated image so stream doesn't freeze (only if someone is watching)
+            if cv_img is not None:
+                self.annotated_pub.publish(rgb_msg)
             return
 
         # Parse Camera Intrinsics
@@ -275,18 +279,19 @@ class ConeLandmarkProcessor(Node):
                 
                 landmarks_msg.landmarks.append(lm_det)
                 
-            # Draw annotation on image
-            x1 = int(u_center - size_x / 2)
-            y1 = int(v_center - size_y / 2)
-            x2 = int(u_center + size_x / 2)
-            y2 = int(v_center + size_y / 2)
-            
-            score = det.results[0].hypothesis.score if det.results else 0.0
-            
-            # Big text: Cone, Score, and Depth
-            label = f"Cone: {score:.2f} | D: {z_m:.1f}m"
-            cv2.rectangle(cv_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
-            cv2.putText(cv_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
+            # Draw annotation on image if someone is watching
+            if cv_img is not None:
+                x1 = int(u_center - size_x / 2)
+                y1 = int(v_center - size_y / 2)
+                x2 = int(u_center + size_x / 2)
+                y2 = int(v_center + size_y / 2)
+                
+                score = det.results[0].hypothesis.score if det.results else 0.0
+                
+                # Big text: Cone, Score, and Depth
+                label = f"Cone: {score:.2f} | D: {z_m:.1f}m"
+                cv2.rectangle(cv_img, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                cv2.putText(cv_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 3)
                 
         # Clean up dead candidates that haven't been seen in several frames
         self.candidates = [c for c in self.candidates if c['hits'] > -3]
@@ -296,14 +301,15 @@ class ConeLandmarkProcessor(Node):
             
         self.publish_markers()
         
-        # Publish annotated image
-        success, compressed_data = cv2.imencode('.jpg', cv_img)
-        if success:
-            annotated_msg = CompressedImage()
-            annotated_msg.header = rgb_msg.header
-            annotated_msg.format = 'jpeg'
-            annotated_msg.data = compressed_data.tobytes()
-            self.annotated_pub.publish(annotated_msg)
+        # Publish annotated image if someone is watching
+        if cv_img is not None:
+            success, compressed_data = cv2.imencode('.jpg', cv_img)
+            if success:
+                annotated_msg = CompressedImage()
+                annotated_msg.header = rgb_msg.header
+                annotated_msg.format = 'jpeg'
+                annotated_msg.data = compressed_data.tobytes()
+                self.annotated_pub.publish(annotated_msg)
             
     def publish_markers(self):
         # Always publish visualization markers so they don't flicker/disappear
