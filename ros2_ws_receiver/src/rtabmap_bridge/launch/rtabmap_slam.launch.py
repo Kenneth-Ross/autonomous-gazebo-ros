@@ -99,7 +99,6 @@ def generate_launch_description():
                     '^/tf$', '^/tf_static$', 
                     '^/map$', '^/odometry/filtered$',
                     '^/rtabmap/.*', 
-                    '^/ground_truth/tf$',
                     '^/edge/camera/rgb/image_raw/compressed$',
                     '^/edge/camera/depth/image_raw/compressed$',
                     '^/yolo/.*'
