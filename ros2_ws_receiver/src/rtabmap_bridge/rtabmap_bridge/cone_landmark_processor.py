@@ -246,7 +246,7 @@ class ConeLandmarkProcessor(Node):
                                 'class': class_id
                             })
                             self.get_logger().info(f"PROMOTED candidate to landmark: {class_id} (ID: {landmark_id}) at {matched_cand['position']}")
-                            self.candidates.remove(matched_cand)
+                            self.candidates = [c for c in self.candidates if c is not matched_cand]
                         else:
                             landmark_id = -1 # Not ready yet
                     else:
