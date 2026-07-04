@@ -22,7 +22,7 @@ class PurePursuitNode(Node):
         self.current_velocity = 0.0
 
         # Subscriptions
-        self.create_subscription(Path, '/racing/target_path', self.path_cb, 10)
+        self.create_subscription(Path, '/racing/local_path', self.path_cb, 10)
         self.create_subscription(Odometry, '/odom', self.odom_cb, 10)
 
         # Publishers
