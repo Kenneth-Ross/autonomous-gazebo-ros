@@ -21,7 +21,8 @@ def launch_setup(context):
         package='sim_camera_decoder', plugin='SimCameraDecoder', name='camera_decoder',
         parameters=[{'use_sim_time': use_sim_time,
                      'publish_compressed': enabled['enable_preview_compression'],
-                     'preview_rate_hz': float(cfg['preview_rate_hz'])}],
+                     'preview_rate_hz': float(cfg['preview_rate_hz']),
+                     'pairing_queue_depth': 8}],
         extra_arguments=[{'use_intra_process_comms': True}])]
     if enabled['enable_slam']:
         common = {'use_sim_time': use_sim_time, 'frame_id': 'base_link',

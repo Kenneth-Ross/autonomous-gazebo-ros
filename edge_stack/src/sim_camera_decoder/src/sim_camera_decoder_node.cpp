@@ -17,7 +17,7 @@ class SimCameraDecoder : public rclcpp::Node
 {
 public:
   explicit SimCameraDecoder(const rclcpp::NodeOptions & options = rclcpp::NodeOptions())
-  : Node("camera_decoder", options), pairer_(2)
+  : Node("camera_decoder", options), pairer_(8)
   {
     width_ = declare_parameter<int>("image_width", 1280);
     height_ = declare_parameter<int>("image_height", 800);
@@ -26,9 +26,11 @@ public:
     preview_rate_ = declare_parameter<double>("preview_rate_hz", 5.0);
     jpeg_quality_ = declare_parameter<int>("jpeg_quality", 50);
     png_level_ = declare_parameter<int>("png_compression", 3);
-    if (width_ <= 0 || height_ <= 0 || preview_rate_ < 0.0) {
+    pairing_queue_depth_ = declare_parameter<int>("pairing_queue_depth", 8);
+    if (width_ <= 0 || height_ <= 0 || preview_rate_ < 0.0 || pairing_queue_depth_ <= 0) {
       throw std::invalid_argument("dimensions must be positive and preview rate non-negative");
     }
+    pairer_.set_capacity(static_cast<std::size_t>(pairing_queue_depth_));
     const auto sensor_qos = rclcpp::SensorDataQoS().keep_last(1);
     const auto info_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
     rgb_pub_ = create_publisher<sensor_msgs::msg::Image>("/edge/camera/rgb/image_raw", sensor_qos);
@@ -47,7 +49,7 @@ public:
     auto wire_qos = rmw_qos_profile_default;
     wire_qos.history = RMW_QOS_POLICY_HISTORY_KEEP_LAST;
     wire_qos.depth = 2;
-    wire_qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+    wire_qos.reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
     rgb_sub_ = image_transport::create_subscription(this, "/oakd/rgb/image_raw",
         [this](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {enqueue_rgb(msg);},
       "ffmpeg", wire_qos);
@@ -151,10 +153,14 @@ private:
   void report()
   {
     std::lock_guard<std::mutex> lock(mutex_);
+    const auto rgb_stamp = pairer_.newest_left_stamp();
+    const auto depth_stamp = pairer_.newest_right_stamp();
+    const long long stamp_gap_ns = rgb_stamp && depth_stamp ?
+      static_cast<long long>(*rgb_stamp - *depth_stamp) : 0LL;
     RCLCPP_INFO(get_logger(), "rgb_received=%lu depth_received=%lu pairs_published=%lu "
-      "unmatched_dropped=%zu queue_high_water=%zu malformed=%lu previews=%lu",
-      rgb_received_, depth_received_, published_, pairer_.dropped(), pairer_.high_water(),
-      malformed_, previews_);
+      "unmatched_dropped=%zu queue_size=%zu queue_high_water=%zu stamp_gap_ns=%lld "
+      "malformed=%lu previews=%lu", rgb_received_, depth_received_, published_,
+      pairer_.dropped(), pairer_.size(), pairer_.high_water(), stamp_gap_ns, malformed_, previews_);
   }
   image_transport::Subscriber rgb_sub_, depth_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_;
@@ -166,7 +172,7 @@ private:
   std::mutex mutex_; std::condition_variable pair_cv_, preview_cv_;
   std::optional<PreviewJob> preview_job_; std::thread pair_thread_, preview_thread_;
   rclcpp::TimerBase::SharedPtr timer_; bool stop_{false}, preview_; int width_, height_;
-  int jpeg_quality_, png_level_; double preview_rate_; std::string frame_id_;
+  int jpeg_quality_, png_level_, pairing_queue_depth_; double preview_rate_; std::string frame_id_;
   int64_t last_preview_stamp_{0};
   uint64_t rgb_received_{0}, depth_received_{0}, published_{0}, malformed_{0}, previews_{0};
 };

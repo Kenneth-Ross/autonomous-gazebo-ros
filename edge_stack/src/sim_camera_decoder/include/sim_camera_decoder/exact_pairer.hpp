@@ -40,7 +40,6 @@ public:
       }
     }
     if (!newest) {
-      drop_impossible_oldest();
       return std::nullopt;
     }
     Pair result{std::move(left_.at(*newest)), std::move(right_.at(*newest))};
@@ -56,6 +55,15 @@ public:
   std::size_t dropped() const {return dropped_;}
   std::size_t high_water() const {return high_water_;}
   std::size_t size() const {return left_.size() + right_.size();}
+  std::optional<int64_t> newest_left_stamp() const
+  {
+    return left_.empty() ? std::nullopt : std::optional<int64_t>(left_.rbegin()->first);
+  }
+  std::optional<int64_t> newest_right_stamp() const
+  {
+    return right_.empty() ? std::nullopt : std::optional<int64_t>(right_.rbegin()->first);
+  }
+  void set_capacity(std::size_t capacity) {capacity_ = capacity; trim(left_); trim(right_);}
 
 private:
   template<typename Map>
@@ -63,20 +71,6 @@ private:
   {
     while (values.size() > capacity_) {
       values.erase(values.begin());
-      ++dropped_;
-    }
-  }
-
-  void drop_impossible_oldest()
-  {
-    while (!left_.empty() && !right_.empty()) {
-      if (left_.begin()->first < right_.begin()->first) {
-        left_.erase(left_.begin());
-      } else if (right_.begin()->first < left_.begin()->first) {
-        right_.erase(right_.begin());
-      } else {
-        break;
-      }
       ++dropped_;
     }
   }

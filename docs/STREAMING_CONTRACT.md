@@ -14,9 +14,7 @@ Both messages in a pair carry the identical Gazebo timestamp and
 negative, and zero values become `0`; finite values round to the nearest millimetre;
 values at or above 65.535 m saturate to `65535`.
 
-Wire transports use reliable KeepLast(2). The edge receiver callbacks only enqueue
-shared messages. A worker matches exact timestamps, keeps at most two messages per
-stream, drops old incomplete data, and publishes the newest complete pair. Edge raw
+Wire publishers use reliable KeepLast(2). Edge transport subscriptions request best-effort KeepLast(2) from those compatible publishers, preventing stale reliable backlog when codec rates differ. Receiver callbacks only enqueue shared messages. A worker matches exact timestamps in a configurable bounded window (`pairing_queue_depth`, default 8), evicts only on capacity, drops old incomplete data, and publishes the newest complete pair. Edge raw
 outputs use sensor-data best-effort KeepLast(1); CameraInfo uses reliable KeepLast(1):
 
 - `/edge/camera/rgb/image_raw` (`bgr8`)
