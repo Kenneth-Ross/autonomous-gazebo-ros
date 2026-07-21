@@ -51,7 +51,7 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "'/edge/camera/depth/image_raw'" not in landmark
     assert "'/edge/camera/rgb/image_raw/compressed'" not in landmark
     assert "'/yolo/annotated/compressed'" not in landmark
-    detector = (Path(__file__).parents[1] / 'rtabmap_bridge' / 'cone_detector_npu.py').read_text()
-    assert "ImageMarker, '/yolo/image_annotations'" in detector
-    assert "annotation.type = ImageMarker.LINE_STRIP" in detector
-    assert "annotation.header = msg.header" in detector
+    assert "ImageAnnotations, '/yolo/image_annotations'" in landmark
+    assert "bbox_annotation.type = PointsAnnotation.LINE_LOOP" in landmark
+    assert 'text_annotation.text = f"{display_id}: {z_m:.1f}m"' in landmark
+    assert "self.annotation_pub.publish(annotations_msg)" in landmark

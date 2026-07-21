@@ -4,8 +4,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from vision_msgs.msg import Detection2DArray, Detection2D, ObjectHypothesisWithPose
 from cv_bridge import CvBridge
-from visualization_msgs.msg import ImageMarker
-from geometry_msgs.msg import Point
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 import numpy as np
 import cv2
@@ -69,8 +67,6 @@ class ConeDetectorNPUNode(Node):
         
         # Publisher for detections
         self.det_pub = self.create_publisher(Detection2DArray, '/yolo/detections', 10)
-        self.annotation_pub = self.create_publisher(
-            ImageMarker, '/yolo/image_annotations', pipeline_qos)
         
         # Subscriptions
         self.img_sub = self.create_subscription(
@@ -190,25 +186,6 @@ class ConeDetectorNPUNode(Node):
                 det.results.append(hyp)
                 
                 det_array_msg.detections.append(det)
-                annotation = ImageMarker()
-                annotation.header = msg.header
-                annotation.ns = 'cone_bbox'
-                annotation.id = int(len(det_array_msg.detections) - 1)
-                annotation.type = ImageMarker.LINE_STRIP
-                annotation.action = ImageMarker.ADD
-                annotation.scale = 3.0
-                annotation.outline_color.r = 0.0
-                annotation.outline_color.g = 1.0
-                annotation.outline_color.b = 0.0
-                annotation.outline_color.a = 1.0
-                annotation.lifetime.nanosec = 750000000
-                left, top = float(box[0]), float(box[1])
-                right, bottom = left + float(box[2]), top + float(box[3])
-                annotation.points = [
-                    Point(x=left, y=top), Point(x=right, y=top),
-                    Point(x=right, y=bottom), Point(x=left, y=bottom),
-                    Point(x=left, y=top)]
-                self.annotation_pub.publish(annotation)
                 
         self.det_pub.publish(det_array_msg)
 

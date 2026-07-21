@@ -6,6 +6,7 @@ from vision_msgs.msg import Detection2DArray
 from rtabmap_msgs.msg import LandmarkDetections, LandmarkDetection
 from geometry_msgs.msg import PointStamped, Pose
 from visualization_msgs.msg import Marker, MarkerArray
+from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, TextAnnotation, Point2
 from cv_bridge import CvBridge
 import numpy as np
 import message_filters
@@ -67,6 +68,8 @@ class ConeLandmarkProcessor(Node):
         self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmark_detections', 10)
         # Publisher for Foxglove Visualization
         self.marker_pub = self.create_publisher(MarkerArray, '/yolo/landmark_markers', 10)
+        self.annotation_pub = self.create_publisher(
+            ImageAnnotations, '/yolo/image_annotations', pipeline_qos)
         self.get_logger().info("Cone Landmark Processor (Robust Tracker) initialized.")
 
     def info_callback(self, msg):
@@ -91,6 +94,7 @@ class ConeLandmarkProcessor(Node):
             cand['hits'] -= 1
         
         if not yolo_msg.detections:
+            self.annotation_pub.publish(ImageAnnotations())
             self.candidates = [c for c in self.candidates if c['hits'] > -3]
             # Always publish markers even if no detections in this frame
             self.publish_markers()
@@ -118,6 +122,7 @@ class ConeLandmarkProcessor(Node):
         # Prepare RTAB-Map LandmarkDetections message
         landmarks_msg = LandmarkDetections()
         landmarks_msg.header = depth_msg.header
+        annotations_msg = ImageAnnotations()
         stamp = depth_msg.header.stamp
         
         try:
@@ -260,6 +265,31 @@ class ConeLandmarkProcessor(Node):
             else:
                 landmark_id = -1
             
+            bbox_annotation = PointsAnnotation()
+            bbox_annotation.timestamp = depth_msg.header.stamp
+            bbox_annotation.type = PointsAnnotation.LINE_LOOP
+            bbox_annotation.thickness = 3.0
+            bbox_annotation.outline_color.g = 1.0
+            bbox_annotation.outline_color.a = 1.0
+            left = float(u_center - size_x / 2.0)
+            top = float(v_center - size_y / 2.0)
+            right = float(u_center + size_x / 2.0)
+            bottom = float(v_center + size_y / 2.0)
+            bbox_annotation.points = [Point2(x=left, y=top), Point2(x=right, y=top),
+                                      Point2(x=right, y=bottom), Point2(x=left, y=bottom)]
+            annotations_msg.points.append(bbox_annotation)
+
+            text_annotation = TextAnnotation()
+            text_annotation.timestamp = depth_msg.header.stamp
+            text_annotation.position = Point2(x=left, y=max(18.0, top - 4.0))
+            display_id = str(landmark_id) if landmark_id != -1 else '?'
+            text_annotation.text = f"{display_id}: {z_m:.1f}m"
+            text_annotation.font_size = 18.0
+            text_annotation.text_color.g = 1.0
+            text_annotation.text_color.a = 1.0
+            text_annotation.background_color.a = 0.65
+            annotations_msg.texts.append(text_annotation)
+
             # Only send to RTAB-Map if it's a persistent landmark
             if landmark_id != -1:
                 lm_det = LandmarkDetection()
@@ -279,6 +309,8 @@ class ConeLandmarkProcessor(Node):
                 landmarks_msg.landmarks.append(lm_det)
                 
                 
+        self.annotation_pub.publish(annotations_msg)
+
         # Clean up dead candidates that haven't been seen in several frames
         self.candidates = [c for c in self.candidates if c['hits'] > -3]
             

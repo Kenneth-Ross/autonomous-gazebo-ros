@@ -65,7 +65,7 @@ Expected TF relationships include:
 - the localization chain required by the running SLAM/EKF configuration.
 
 Connect Foxglove to `ws://<orange-pi-address>:8765` only over a trusted network. Verify panels using whitelisted topics, then monitor edge CPU and network use while compressed images are visible.
-In the Image panel, select `/edge/camera/rgb/image_raw/compressed` as the image and `/yolo/image_annotations` as the annotation topic. Bounding boxes use timestamp-aligned `visualization_msgs/msg/ImageMarker` line strips rendered client-side; `/yolo/annotated/compressed` is intentionally absent.
+In the Image panel, select `/edge/camera/rgb/image_raw/compressed` as the image and `/yolo/image_annotations` as the annotation topic. Bounding boxes and `ID: DISTm` labels arrive together in one timestamp-aligned `foxglove_msgs/msg/ImageAnnotations` message rendered client-side; `/yolo/annotated/compressed` is intentionally absent.
 
 
 ## Troubleshooting

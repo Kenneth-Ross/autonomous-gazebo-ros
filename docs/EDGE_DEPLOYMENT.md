@@ -4,6 +4,12 @@ This checkout is the simulation server. The following commands are Orange Pi
 instructions and have not been run here.
 
 ## Orange Pi preflight and build
+Install the Foxglove annotation message dependency once:
+
+```bash
+sudo apt install ros-jazzy-foxglove-msgs
+```
+
 
 ```bash
 source /opt/ros/jazzy/setup.bash
