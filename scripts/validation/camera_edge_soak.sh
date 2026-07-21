@@ -10,12 +10,9 @@ EVIDENCE_DIR="${3:-$REPO_ROOT/validation_evidence}"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 OUTPUT="$EVIDENCE_DIR/camera_edge_soak_$RUN_ID.log"
 RESOURCES="$(mktemp)"
-LATENCY="$(mktemp)"
 METRICS="$(mktemp)"
-latency_pid=''
 cleanup() {
-    [[ -n "$latency_pid" ]] && kill "$latency_pid" 2>/dev/null || true
-    rm -f "$RESOURCES" "$LATENCY" "$METRICS"
+    rm -f "$RESOURCES" "$METRICS"
 }
 trap cleanup EXIT INT TERM
 mkdir -p "$EVIDENCE_DIR"
@@ -31,22 +28,14 @@ set -u
 
 start_line=$(( $(wc -l < "$RECEIVER_LOG") + 1 ))
 echo "camera edge soak utc=$RUN_ID duration_seconds=$DURATION commit=$(git -C "$REPO_ROOT" rev-parse HEAD)"
-python3 "$SCRIPT_DIR/image_latency_probe.py" "$DURATION" > "$LATENCY" 2>&1 &
-latency_pid=$!
 start_epoch=$(date +%s)
-while kill -0 "$latency_pid" 2>/dev/null; do
+end_epoch=$((start_epoch + DURATION))
+while (( $(date +%s) < end_epoch )); do
     elapsed=$(( $(date +%s) - start_epoch ))
     ps -eo rss=,nlwp=,%cpu=,args= | awk -v t="$elapsed" \
         '/component_container_mt/ && !/awk/ {print t, $1, $2, $3; exit}' >> "$RESOURCES"
     sleep 5
 done
-set +e
-wait "$latency_pid"
-latency_status=$?
-set -e
-latency_pid=''
-cat "$LATENCY"
-[[ $latency_status -eq 0 ]] || { echo 'ERROR: latency probe failed'; exit 1; }
 tail -n +"$start_line" "$RECEIVER_LOG" > "$METRICS"
 
 if grep -Eq 'retcode -58|send_packet failed|depth Zstd decode failed' "$METRICS"; then
@@ -85,8 +74,9 @@ END {
   if (growth > 5.0 || max_threads > base_threads+2) exit 1
 }' "$RESOURCES") || { echo "ERROR: resource growth failed ${resource_summary:-missing}"; exit 1; }
 echo "$resource_summary"
-p95=$(sed -n 's/.*p95_ms=\([0-9.]*\).*/\1/p' "$LATENCY")
-[[ -n "$p95" ]] || { echo 'ERROR: p95 latency missing'; exit 1; }
+p95=$(sed -n 's/.*latency_p95_ms=\([0-9.]*\).*/\1/p' "$METRICS" | awk 'NR==1 || $1>max {max=$1} END {if (NR) printf "%.3f", max}')
+[[ -n "$p95" && "$p95" != '-1.000' ]] || { echo 'ERROR: p95 latency missing'; exit 1; }
 awk -v p95="$p95" 'BEGIN {exit !(p95 < 150.0)}' || { echo "ERROR: p95 latency ${p95}ms >= 150ms"; exit 1; }
+echo "latency_window_max_p95_ms=$p95"
 echo "PASS: soak thresholds met"
 echo "evidence=$OUTPUT"

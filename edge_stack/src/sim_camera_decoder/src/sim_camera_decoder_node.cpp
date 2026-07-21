@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <thread>
 #include "sim_camera_decoder/exact_pairer.hpp"
+#include "sim_camera_decoder/latency_stats.hpp"
 #include "sim_camera_decoder/zstd_depth_decoder.hpp"
 
 class SimCameraDecoder : public rclcpp::Node
@@ -121,7 +122,15 @@ private:
     rgb_pub_->publish(std::move(rgb_out)); depth_pub_->publish(std::move(depth_out));
     info_.header = header;
     rgb_info_pub_->publish(info_); depth_info_pub_->publish(info_);
-    ++published_;
+    const auto stamp_ns = rclcpp::Time(header.stamp).nanoseconds();
+    const auto now_ns = get_clock()->now().nanoseconds();
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      ++published_;
+      if (stamp_ns > 0 && now_ns >= stamp_ns) {
+        latency_.add(static_cast<double>(now_ns - stamp_ns) / 1e6);
+      }
+    }
     if (preview_) {
       const int64_t now = rclcpp::Time(header.stamp).nanoseconds();
       const int64_t period = preview_rate_ > 0.0 ? static_cast<int64_t>(1e9 / preview_rate_) : 0;
@@ -177,13 +186,18 @@ private:
     last_rgb_received_ = rgb_received_;
     last_depth_received_ = depth_received_;
     last_published_ = published_;
+    const auto latency_samples = latency_.size();
+    const double latency_p95_ms = latency_samples ? latency_.percentile(0.95) : -1.0;
     RCLCPP_INFO(get_logger(), "rgb_received=%lu depth_received=%lu pairs_published=%lu "
       "rgb_rate=%.1f depth_rate=%.1f pair_rate=%.1f unmatched_dropped=%zu queue_size=%zu "
       "queue_high_water=%zu rgb_stamp_ns=%lld depth_stamp_ns=%lld stamp_gap_ns=%lld "
-      "malformed=%lu previews=%lu", rgb_received_, depth_received_, published_,
+      "malformed=%lu previews=%lu latency_samples=%zu latency_p95_ms=%.3f", rgb_received_,
+      depth_received_, published_,
       rgb_delta / 5.0, depth_delta / 5.0, published_delta / 5.0, pairer_.dropped(), pairer_.size(),
       pairer_.high_water(), static_cast<long long>(rgb_stamp_ns),
-      static_cast<long long>(depth_stamp_ns), stamp_gap_ns, malformed_, previews_);
+      static_cast<long long>(depth_stamp_ns), stamp_gap_ns, malformed_, previews_, latency_samples,
+      latency_p95_ms);
+    latency_.clear();
   }
   image_transport::Subscriber rgb_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr depth_sub_;
@@ -193,6 +207,7 @@ private:
     depth_preview_pub_;
   sensor_msgs::msg::CameraInfo info_;
   sim_camera_decoder::ExactPairer<ImagePtr, ImagePtr> pairer_;
+  sim_camera_decoder::LatencyStats latency_;
   std::mutex mutex_; std::condition_variable pair_cv_, preview_cv_;
   std::optional<PreviewJob> preview_job_; std::thread pair_thread_, preview_thread_;
   rclcpp::TimerBase::SharedPtr timer_; bool stop_{false}, preview_; int width_, height_;

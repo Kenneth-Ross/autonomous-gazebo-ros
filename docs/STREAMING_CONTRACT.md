@@ -31,6 +31,8 @@ GOP 10, zero B-frames, and 20 Mbps. Confirm actual supported options and negotia
 caps in Orange Pi evidence; unsupported wrapper options must not be described as
 confirmed behavior.
 
+Decoder metrics calculate capture-to-publication latency in-process using simulated time and a fixed histogram; validation gates the maximum five-second-window p95 without adding a raw-image DDS subscriber.
+
 Acceptance remains pending: both edge raw topics at 30 FPS, p95 end-to-end latency
 below 150 ms, combined encoded bandwidth below 200 Mbps, zero depth pixel error,
 no FFmpeg/DDS send failures, and a stable 30-minute run.
