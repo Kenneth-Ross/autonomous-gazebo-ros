@@ -34,12 +34,21 @@ set -u
 run_timed() {
     local label="$1"
     shift
+    local output code
     echo
     echo "===== $label ====="
-    timeout --signal=INT "$DURATION" "$@" || {
-        code=$?
-        [[ $code -eq 124 || $code -eq 130 ]] || return "$code"
-    }
+    set +e
+    output="$(timeout --signal=INT "$DURATION" "$@" 2>&1)"
+    code=$?
+    set -e
+    printf "%s\n" "$output"
+    [[ $code -eq 0 || $code -eq 124 || $code -eq 130 ]] || return "$code"
+    if [[ "$label" == *"rate"* ]]; then
+        grep -Fq "average rate:" <<< "$output" || {
+            echo "ERROR: $label produced no rate" >&2
+            return 1
+        }
+    fi
 }
 
 echo "camera edge nominal probe"
@@ -91,8 +100,13 @@ do
     do
         echo
         echo "===== $stream $field ====="
-        ros2 topic echo "$topic" --once --timeout 10 \
-            --qos-profile sensor_data --field "$field"
+        field_output="$(ros2 topic echo "$topic" --once --timeout 10 \
+            --qos-profile sensor_data --field "$field")"
+        printf "%s\n" "$field_output"
+        [[ -n "${field_output//[[:space:]]/}" ]] || {
+            echo "ERROR: $topic produced no $field" >&2
+            exit 1
+        }
     done
 done
 

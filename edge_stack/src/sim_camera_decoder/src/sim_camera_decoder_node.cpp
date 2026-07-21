@@ -155,12 +155,23 @@ private:
     std::lock_guard<std::mutex> lock(mutex_);
     const auto rgb_stamp = pairer_.newest_left_stamp();
     const auto depth_stamp = pairer_.newest_right_stamp();
+    const auto rgb_stamp_ns = rgb_stamp.value_or(0);
+    const auto depth_stamp_ns = depth_stamp.value_or(0);
     const long long stamp_gap_ns = rgb_stamp && depth_stamp ?
       static_cast<long long>(*rgb_stamp - *depth_stamp) : 0LL;
+    const uint64_t rgb_delta = rgb_received_ - last_rgb_received_;
+    const uint64_t depth_delta = depth_received_ - last_depth_received_;
+    const uint64_t published_delta = published_ - last_published_;
+    last_rgb_received_ = rgb_received_;
+    last_depth_received_ = depth_received_;
+    last_published_ = published_;
     RCLCPP_INFO(get_logger(), "rgb_received=%lu depth_received=%lu pairs_published=%lu "
-      "unmatched_dropped=%zu queue_size=%zu queue_high_water=%zu stamp_gap_ns=%lld "
+      "rgb_rate=%.1f depth_rate=%.1f pair_rate=%.1f unmatched_dropped=%zu queue_size=%zu "
+      "queue_high_water=%zu rgb_stamp_ns=%lld depth_stamp_ns=%lld stamp_gap_ns=%lld "
       "malformed=%lu previews=%lu", rgb_received_, depth_received_, published_,
-      pairer_.dropped(), pairer_.size(), pairer_.high_water(), stamp_gap_ns, malformed_, previews_);
+      rgb_delta / 5.0, depth_delta / 5.0, published_delta / 5.0, pairer_.dropped(), pairer_.size(),
+      pairer_.high_water(), static_cast<long long>(rgb_stamp_ns),
+      static_cast<long long>(depth_stamp_ns), stamp_gap_ns, malformed_, previews_);
   }
   image_transport::Subscriber rgb_sub_, depth_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_;
@@ -175,6 +186,7 @@ private:
   int jpeg_quality_, png_level_, pairing_queue_depth_; double preview_rate_; std::string frame_id_;
   int64_t last_preview_stamp_{0};
   uint64_t rgb_received_{0}, depth_received_{0}, published_{0}, malformed_{0}, previews_{0};
+  uint64_t last_rgb_received_{0}, last_depth_received_{0}, last_published_{0};
 };
 
 RCLCPP_COMPONENTS_REGISTER_NODE(SimCameraDecoder)
