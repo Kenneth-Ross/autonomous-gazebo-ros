@@ -22,16 +22,21 @@ latest_field() {
         sed -n "s/.*${field}=\\([^ ]*\\).*/\\1/p" || true
 }
 wait_rate() {
-    local mode="$1" seconds="$2" rate
+    local mode="$1" seconds="$2"
     local deadline=$((SECONDS + seconds))
+    local rate row last_row='' consecutive=0
     while (( SECONDS < deadline )); do
-        rate="$(latest_field pair_rate)"
-        if [[ -n "$rate" ]]; then
+        row="$(tail -n +"$START_LINE" "$RECEIVER_LOG" | grep 'camera_decoder.*pair_rate=' | tail -1 || true)"
+        if [[ -n "$row" && "$row" != "$last_row" ]]; then
+            last_row="$row"
+            rate="$(sed -n 's/.*pair_rate=\([^ ]*\).*/\1/p' <<< "$row")"
             if [[ "$mode" == healthy ]] && awk -v value="$rate" 'BEGIN {exit !(value >= 29.0)}'; then
-                echo "healthy_pair_rate=$rate"; return 0
-            fi
-            if [[ "$mode" == outage ]] && awk -v value="$rate" 'BEGIN {exit !(value <= 1.0)}'; then
+                consecutive=$((consecutive + 1))
+                if (( consecutive >= 2 )); then echo "healthy_pair_rate=$rate fresh_windows=2"; return 0; fi
+            elif [[ "$mode" == outage ]] && awk -v value="$rate" 'BEGIN {exit !(value <= 1.0)}'; then
                 echo "outage_pair_rate=$rate"; return 0
+            else
+                consecutive=0
             fi
         fi
         sleep 1

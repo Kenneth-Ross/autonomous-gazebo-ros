@@ -19,6 +19,9 @@ trap cleanup EXIT INT TERM
 [[ "$OUTAGE_SECONDS" =~ ^[1-9][0-9]*$ ]] || { echo 'ERROR: outage seconds must be positive'; exit 2; }
 [[ -f "$SERVER_WORKSPACE/install/setup.bash" ]] || { echo 'ERROR: server workspace not built'; exit 2; }
 mkdir -p "$EVIDENCE_DIR"; exec > >(tee -a "$OUTPUT") 2>&1
+export GZ_IP=127.0.0.1
+export ROS_LOCALHOST_ONLY=0
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 set +u; source /opt/ros/jazzy/setup.bash; source "$SERVER_WORKSPACE/install/setup.bash"; set -u
 publisher_count() { ros2 topic info "$1" 2>/dev/null | sed -n 's/Publisher count: //p' | head -1; }
 wait_publishers() {
@@ -53,6 +56,14 @@ echo "sender_stopped outage_seconds=$OUTAGE_SECONDS"; sleep "$OUTAGE_SECONDS"
 setsid ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py > "$SENDER_LOG" 2>&1 &
 replacement_launcher=$!
 wait_publishers 1 40
+data_deadline=$((SECONDS + 20))
+while (( SECONDS < data_deadline )); do
+    if grep -Eq 'rgb_received=[1-9][0-9]* depth_received=[1-9][0-9]*' "$SENDER_LOG"; then break; fi
+    sleep 1
+done
+grep -Eq 'rgb_received=[1-9][0-9]* depth_received=[1-9][0-9]*' "$SENDER_LOG" || {
+    tail -40 "$SENDER_LOG"; echo 'ERROR: replacement sender has no Gazebo RGB-D input'; exit 1;
+}
 mapfile -t new_encoders < <(pgrep -P "$replacement_launcher" -f '/sim_camera_encoder_node( |$)' || true)
 [[ ${#new_encoders[@]} -eq 1 ]] || { tail -40 "$SENDER_LOG"; echo 'ERROR: replacement process tree invalid'; exit 1; }
 completed=true
