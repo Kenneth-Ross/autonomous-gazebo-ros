@@ -1,27 +1,28 @@
 # Current Architecture
 
-This describes repository state, not hardware acceptance. Status terms are in [VALIDATION.md](VALIDATION.md).
+This describes repository source, not Orange Pi acceptance.
 
 ```mermaid
 flowchart LR
-  GZ[Gazebo Harmonic] -->|Gazebo Transport RGB + float depth| ENC[sim_camera_encoder]
-  ENC -->|HEVC via ffmpeg image transport| DDS[ROS 2 / CycloneDDS]
-  DDS --> DEC[sim_camera_decoder]
-  DEC -->|RGB bgr8 + depth 16UC1| EDGE[edge perception / SLAM / navigation]
-  EDGE -->|ROS 2 control request| CTRL[host vehicle control]
+  GZ[Gazebo RGB + float depth] --> ENC[exact-stamp conversion/pairing]
+  ENC -->|bgr8 HEVC| DDS[ROS 2 / CycloneDDS]
+  ENC -->|16UC1 Zstd| DDS
+  DDS --> DEC[bounded exact-stamp edge receiver]
+  DEC -->|best-effort raw RGB-D| VISION[odometry / SLAM / perception]
+  DEC -->|5 FPS bounded previews| OBS[Foxglove / NPU]
 ```
 
-Host source is in `server_sim/src`; edge-targeted source is in `edge_stack/src`. A private ROS topic name is a namespace rule, not a guarantee that data stays local.
+Host source is in `server_sim/src`; deployable edge source is in `edge_stack/src`.
+The encoder converts depth once and emits two messages with identical Gazebo stamps
+and `camera_link_optical`. The edge callbacks enqueue only shared messages; a worker
+publishes the newest exact pair through shallow sensor-data QoS. Preview compression
+and slow perception consumers use bounded newest-frame queues.
 
-## Implemented camera path
+The edge launch composes decoder, RGB-D odometry, and RTAB-Map with intra-process
+communication when SLAM is enabled. Flags isolate Foxglove, SLAM, NPU, landmarks,
+and preview compression. Generated CycloneDDS XML is the canonical pipeline DDS
+configuration and validates an explicitly requested interface/local address.
 
-`sim_camera_encoder` reads Gazebo Transport RGB/depth, accepts pairs within 50 ms, converts float metres to 16-bit millimetres, and publishes [the packed image](STREAMING_CONTRACT.md). The sender configures CycloneDDS and `hevc_nvenc` through `ffmpeg_image_transport`. The decoder unpacks RGB/depth and defaults to 5 Hz; `output_rate_hz` is configurable and `0` disables throttling.
-
-## Known limitations
-
-- Calibration defaults are parameterized in the decoder but are not yet generated from or shared with Gazebo.
-- Compressed outputs use a bounded newest-frame worker queue; overload drops pending compression work by design.
-- DDS routing depends on deployed configuration and interfaces.
-- Perception, SLAM, navigation, racing, and telemetry source does not by itself prove integration or performance.
-
-No NPU rate, bit-exact depth, semantic loop closure, failsafe control, or end-to-end success is asserted here.
+Known limitations remain calibration provenance, hardware codec option confirmation,
+and all end-to-end rate, latency, bandwidth, depth-integrity, restart, and soak
+evidence listed in [VALIDATION.md](VALIDATION.md).

@@ -1,27 +1,37 @@
-# [W.I.P] Simulation-to-Edge RGB-D Streaming Contract
+# [W.I.P] 30 FPS RGB + Lossless Zstd Depth Pipeline
 
-**Status: implemented, not recorded as end-to-end verified.**
+The active wire contract is two exact-timestamp image transports. The legacy packed
+`RGB | depth MSB | depth LSB` super-frame and `/oakd/super_frame/image_raw/ffmpeg`
+topic are not part of this contract.
 
-| Field | Current value |
-|---|---|
-| Layout | Horizontal `RGB | depth MSB | depth LSB` |
-| Plane / packed size | 1280×800 / 3840×800 |
-| Packed encoding | `bgr8` |
-| Depth | Float metres to `16UC1` millimetres |
-| Byte planes | MSB/LSB, each replicated across BGR |
-| Timestamp / frame | RGB Gazebo stamp / `camera_link_optical` |
-| Pair tolerance | 50 ms |
+| Stream | Wire topic | Source/output encoding | Size | Transport |
+|---|---|---|---|---|
+| RGB | `/oakd/rgb/image_raw/ffmpeg` | `bgr8` | 1280×800 | HEVC/NVENC, 20 Mbps initial target |
+| Depth | `/oakd/depth/image_raw/zstd` | `16UC1` millimetres | 1280×800 | lossless Zstd level 1 |
 
-The decoder reconstructs `(MSB << 8) | LSB`. Invalid/out-of-range depth semantics are unspecified.
+Both messages in a pair carry the identical Gazebo timestamp and
+`camera_link_optical`. Float depth metres convert once on the server: non-finite,
+negative, and zero values become `0`; finite values round to the nearest millimetre;
+values at or above 65.535 m saturate to `65535`.
 
-## Transport
+Wire transports use reliable KeepLast(2). The edge receiver callbacks only enqueue
+shared messages. A worker matches exact timestamps, keeps at most two messages per
+stream, drops old incomplete data, and publishes the newest complete pair. Edge raw
+outputs use sensor-data best-effort KeepLast(1); CameraInfo uses reliable KeepLast(1):
 
-- Base topic: `/oakd/super_frame/image_raw`
-- `ffmpeg_image_transport` through ROS 2/DDS
-- Current encoder/bitrate: `hevc_nvenc`, 20,000,000 bit/s
-- Outputs: `/edge/camera/rgb/image_raw` (`bgr8`) and `/edge/camera/depth/image_raw` (`16UC1`)
-- Camera info: `/edge/camera/{rgb,depth}/camera_info`
+- `/edge/camera/rgb/image_raw` (`bgr8`)
+- `/edge/camera/depth/image_raw` (`16UC1`)
+- `/edge/camera/{rgb,depth}/camera_info`
 
-This is not direct UDP/RTSP and has no `host` launch argument. CycloneDDS controls discovery/interfaces. HEVC is lossy; replicated bytes do not prove bit-exact depth. Test the real path.
+JPEG/PNG preview compression uses a separate one-slot worker at
+`preview_rate_hz:=5.0` by default. It is observability output and cannot apply
+backpressure to raw camera publication.
 
-`sim_camera_encoder` is the sole producer in the active sender launch.
+NVENC launch policy requests `hevc_nvenc`, preset `p1`, ultra-low-latency tuning,
+GOP 10, zero B-frames, and 20 Mbps. Confirm actual supported options and negotiated
+caps in Orange Pi evidence; unsupported wrapper options must not be described as
+confirmed behavior.
+
+Acceptance remains pending: both edge raw topics at 30 FPS, p95 end-to-end latency
+below 150 ms, combined encoded bandwidth below 200 Mbps, zero depth pixel error,
+no FFmpeg/DDS send failures, and a stable 30-minute run.

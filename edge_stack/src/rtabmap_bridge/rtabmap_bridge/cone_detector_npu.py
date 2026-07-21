@@ -57,11 +57,11 @@ class ConeDetectorNPUNode(Node):
                         self.get_logger().error(f"Exception initializing RKNN runtime: {e}")
                         self.rknn = None
         
-        # QoS Profile matching the unpacker node (reliable)
+        # Newest-frame preview QoS; inference must not backpressure camera output
         pipeline_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
-            depth=10,
+            depth=1,
             durability=DurabilityPolicy.VOLATILE
         )
         

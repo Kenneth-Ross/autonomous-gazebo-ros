@@ -34,11 +34,11 @@ class ConeLandmarkProcessor(Node):
         
         self.next_landmark_id = 1
         
-        # Standardized Pipeline QoS (Reliable)
+        # Bounded newest-frame QoS for slow consumers
         pipeline_qos = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
-            depth=10,
+            depth=1,
             durability=DurabilityPolicy.VOLATILE
         )
         
@@ -61,9 +61,9 @@ class ConeLandmarkProcessor(Node):
             self, Detection2DArray, '/yolo/detections', qos_profile=10
         )
         
-        # Approximate time synchronizer (100ms slop to handle network jitter)
+        # Exact timestamp synchronizer with bounded queues
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.rgb_sub, self.depth_sub, self.yolo_sub], queue_size=10, slop=0.1
+            [self.rgb_sub, self.depth_sub, self.yolo_sub], queue_size=2, slop=0.0
         )
         self.ts.registerCallback(self.callback)
         
