@@ -39,7 +39,7 @@ def test_npu_requires_explicit_existing_model():
 def test_slam_uses_sensor_data_qos_for_raw_images():
     launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
     assert "'qos_image': 2" in launch
-    assert "parameters=[dict(common, qos=2)]" in launch
+    assert "parameters=[dict(common, qos=2, publish_tf=False)]" in launch
     assert "'qos_camera_info': 1" in launch
     assert "'sync_queue_size': 2" in launch
     assert "'queue_size': 2" not in launch
@@ -60,4 +60,8 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "while len(self.depth_frames) > 8" in landmark
     assert "self.depth_frames.pop(self.stamp_key(msg.header), None)" in landmark
     assert "'/edge/landmark_detections'" in landmark
-    assert "('landmarks', '/edge/landmark_detections')" in launch
+    assert "namespace='rtabmap'" in launch
+    assert "('landmark_detections', '/edge/landmark_detections')" in launch
+    assert "('odom', '/rgbd_odometry/odom')" in launch
+    assert "('odom', '/odometry/filtered')" in launch
+    assert "publish_tf=False" in launch

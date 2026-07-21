@@ -28,11 +28,12 @@ Camera-only operation is the launch default; preview, Foxglove, SLAM, NPU, and l
 
 Landmark processing consumes `/edge/perception/depth/image_raw`, published by the bounded preview worker with the same timestamp and rate as YOLO RGB input. It must not subscribe to the 30 FPS full-resolution public depth topic from its separate Python process.
 Landmark processing publishes one bundled `foxglove_msgs/msg/ImageAnnotations` message per perception frame on `/yolo/image_annotations`. It contains every bounding box as a `PointsAnnotation` `LINE_LOOP` plus a `TextAnnotation` formatted `ID: DISTm` (for example, `1: 3.0m`), all using the source image timestamp and pixel coordinates. Foxglove overlays these on `/edge/camera/rgb/image_raw/compressed`; no annotated JPEG is generated. Landmark processing does not subscribe to RGB.
-Delayed detections are matched to perception depth by an explicit exact-timestamp map bounded to eight frames. Landmark input to RTAB-Map uses `/edge/landmark_detections`, avoiding a type/schema collision with RTAB-Map output `/rtabmap/landmark_detections`.
+Delayed detections are matched to perception depth by an explicit exact-timestamp map bounded to eight frames. Landmark input to RTAB-Map uses `/edge/landmark_detections`; RTAB-Map's PoseArray output remains `/rtabmap/landmarks`, so each topic has one schema.
 
 
 
 Full-stack SLAM consumes an internal exact-pair feed on `/edge/slam/{rgb,depth}/{image_raw,camera_info}`. The decoder gates this newest synchronized feed to configurable `slam_rate_hz` (default 10 Hz), while public `/edge/camera/...` sensor outputs remain 30 FPS. Both image feeds use best-effort KeepLast(1); CameraInfo remains reliable KeepLast(1).
+Full-stack odometry ownership is explicit: Gazebo publishes `/odom`, RGB-D odometry publishes `/rgbd_odometry/odom` without TF, the covariance injector feeds the EKF, the EKF publishes `/odometry/filtered` and owns `odom -> base_link`, and namespaced RTAB-Map consumes `/odometry/filtered` and publishes maps under `/rtabmap/*`.
 
 Edge exposes optional `rgb_decoder_av_options`, default empty. Orange Pi `hevc_rkmpp` rejected `flags:low_delay`, so it is not requested. Stage p95 metrics distinguish RGB decode, depth wire arrival, and final paired publication.
 
