@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 from rtabmap_bridge.launch_contract import cyclone_uri, validate_flags, validate_network
 
 
@@ -18,3 +19,9 @@ def test_dds_interface_address_and_peer_contract():
     assert '<MaxMessageSize>1472B</MaxMessageSize>' in xml
     assert '<FragmentSize>1344B</FragmentSize>' in xml
     assert '<MaxMessageSize>12MB</MaxMessageSize>' not in xml
+
+
+def test_launch_requests_low_delay_rgb_decode():
+    launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
+    assert "DeclareLaunchArgument('rgb_decoder_av_options', default_value='flags:low_delay')" in launch
+    assert "'oakd.rgb.image_raw.ffmpeg.decoder_av_options'" in launch

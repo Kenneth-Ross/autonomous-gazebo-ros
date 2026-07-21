@@ -59,6 +59,7 @@ public:
       "/oakd/depth/image_raw/zstd",
       rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(wire_qos), wire_qos),
       [this](const sensor_msgs::msg::CompressedImage::ConstSharedPtr msg) {
+        record_latency(depth_wire_latency_, rclcpp::Time(msg->header.stamp).nanoseconds());
         auto decoded = std::make_shared<sensor_msgs::msg::Image>();
         std::string error;
         if (!sim_camera_decoder::decode_zstd_image(*msg, *decoded, error)) {
@@ -88,8 +89,24 @@ private:
   static int64_t stamp(const ImagePtr & msg) {return rclcpp::Time(msg->header.stamp).nanoseconds();}
   void enqueue_rgb(const ImagePtr & msg)
   {
-    {std::lock_guard<std::mutex> lock(mutex_); ++rgb_received_; pairer_.push_left(stamp(msg), msg);}
+    const auto stamp_ns = stamp(msg);
+    {std::lock_guard<std::mutex> lock(mutex_);
+      ++rgb_received_;
+      add_latency(rgb_decode_latency_, stamp_ns);
+      pairer_.push_left(stamp_ns, msg);}
     pair_cv_.notify_one();
+  }
+  void record_latency(sim_camera_decoder::LatencyStats & stats, int64_t stamp_ns)
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    add_latency(stats, stamp_ns);
+  }
+  void add_latency(sim_camera_decoder::LatencyStats & stats, int64_t stamp_ns)
+  {
+    const auto now_ns = get_clock()->now().nanoseconds();
+    if (stamp_ns > 0 && now_ns >= stamp_ns) {
+      stats.add(static_cast<double>(now_ns - stamp_ns) / 1e6);
+    }
   }
   void enqueue_depth(const ImagePtr & msg)
   {
@@ -128,7 +145,7 @@ private:
       std::lock_guard<std::mutex> lock(mutex_);
       ++published_;
       if (stamp_ns > 0 && now_ns >= stamp_ns) {
-        latency_.add(static_cast<double>(now_ns - stamp_ns) / 1e6);
+        pair_latency_.add(static_cast<double>(now_ns - stamp_ns) / 1e6);
       }
     }
     if (preview_) {
@@ -186,18 +203,25 @@ private:
     last_rgb_received_ = rgb_received_;
     last_depth_received_ = depth_received_;
     last_published_ = published_;
-    const auto latency_samples = latency_.size();
-    const double latency_p95_ms = latency_samples ? latency_.percentile(0.95) : -1.0;
+    const auto latency_samples = pair_latency_.size();
+    const double pair_latency_p95_ms = latency_samples ? pair_latency_.percentile(0.95) : -1.0;
+    const double rgb_decode_p95_ms = rgb_decode_latency_.size() ?
+      rgb_decode_latency_.percentile(0.95) : -1.0;
+    const double depth_wire_p95_ms = depth_wire_latency_.size() ?
+      depth_wire_latency_.percentile(0.95) : -1.0;
     RCLCPP_INFO(get_logger(), "rgb_received=%lu depth_received=%lu pairs_published=%lu "
       "rgb_rate=%.1f depth_rate=%.1f pair_rate=%.1f unmatched_dropped=%zu queue_size=%zu "
       "queue_high_water=%zu rgb_stamp_ns=%lld depth_stamp_ns=%lld stamp_gap_ns=%lld "
-      "malformed=%lu previews=%lu latency_samples=%zu latency_p95_ms=%.3f", rgb_received_,
+      "malformed=%lu previews=%lu latency_samples=%zu pair_latency_p95_ms=%.3f "
+      "rgb_decode_p95_ms=%.3f depth_wire_p95_ms=%.3f", rgb_received_,
       depth_received_, published_,
       rgb_delta / 5.0, depth_delta / 5.0, published_delta / 5.0, pairer_.dropped(), pairer_.size(),
       pairer_.high_water(), static_cast<long long>(rgb_stamp_ns),
       static_cast<long long>(depth_stamp_ns), stamp_gap_ns, malformed_, previews_, latency_samples,
-      latency_p95_ms);
-    latency_.clear();
+      pair_latency_p95_ms, rgb_decode_p95_ms, depth_wire_p95_ms);
+    pair_latency_.clear();
+    rgb_decode_latency_.clear();
+    depth_wire_latency_.clear();
   }
   image_transport::Subscriber rgb_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr depth_sub_;
@@ -207,7 +231,7 @@ private:
     depth_preview_pub_;
   sensor_msgs::msg::CameraInfo info_;
   sim_camera_decoder::ExactPairer<ImagePtr, ImagePtr> pairer_;
-  sim_camera_decoder::LatencyStats latency_;
+  sim_camera_decoder::LatencyStats pair_latency_, rgb_decode_latency_, depth_wire_latency_;
   std::mutex mutex_; std::condition_variable pair_cv_, preview_cv_;
   std::optional<PreviewJob> preview_job_; std::thread pair_thread_, preview_thread_;
   rclcpp::TimerBase::SharedPtr timer_; bool stop_{false}, preview_; int width_, height_;

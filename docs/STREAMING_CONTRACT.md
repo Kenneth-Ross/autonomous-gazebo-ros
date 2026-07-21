@@ -26,6 +26,8 @@ JPEG/PNG preview compression uses a separate one-slot worker at
 backpressure to raw camera publication.
 Camera-only operation is the launch default; preview, Foxglove, SLAM, NPU, and landmarks are opt-in.
 
+Edge HEVC decode requests the libav `flags:low_delay` option through `rgb_decoder_av_options`; stage p95 metrics distinguish RGB decode, depth wire arrival, and final paired publication. Hardware effect remains subject to Orange Pi evidence.
+
 NVENC launch policy requests `hevc_nvenc`, preset `p1`, ultra-low-latency tuning,
 GOP 10, zero B-frames, and 20 Mbps. Confirm actual supported options and negotiated
 caps in Orange Pi evidence; unsupported wrapper options must not be described as

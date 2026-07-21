@@ -22,7 +22,9 @@ def launch_setup(context):
         parameters=[{'use_sim_time': use_sim_time,
                      'publish_compressed': enabled['enable_preview_compression'],
                      'preview_rate_hz': float(cfg['preview_rate_hz']),
-                     'pairing_queue_depth': 8}],
+                     'pairing_queue_depth': 8,
+                     'oakd.rgb.image_raw.ffmpeg.decoder_av_options':
+                         cfg['rgb_decoder_av_options']}],
         extra_arguments=[{'use_intra_process_comms': True}])]
     if enabled['enable_slam']:
         common = {'use_sim_time': use_sim_time, 'frame_id': 'base_link',
@@ -77,7 +79,8 @@ def generate_launch_description():
         DeclareLaunchArgument('network_interface', default_value=''),
         DeclareLaunchArgument('local_address', default_value=''),
         DeclareLaunchArgument('peer_address', default_value='10.10.12.10'),
-        DeclareLaunchArgument('preview_rate_hz', default_value='5.0')]
+        DeclareLaunchArgument('preview_rate_hz', default_value='5.0'),
+        DeclareLaunchArgument('rgb_decoder_av_options', default_value='flags:low_delay')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (
         'enable_foxglove', 'enable_slam', 'enable_npu', 'enable_landmarks',
         'enable_preview_compression')]

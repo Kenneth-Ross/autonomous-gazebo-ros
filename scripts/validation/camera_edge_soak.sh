@@ -74,7 +74,7 @@ END {
   if (growth > 5.0 || max_threads > base_threads+2) exit 1
 }' "$RESOURCES") || { echo "ERROR: resource growth failed ${resource_summary:-missing}"; exit 1; }
 echo "$resource_summary"
-p95=$(sed -n 's/.*latency_p95_ms=\([0-9.]*\).*/\1/p' "$METRICS" | awk 'NR==1 || $1>max {max=$1} END {if (NR) printf "%.3f", max}')
+p95=$(sed -n 's/.*pair_latency_p95_ms=\([0-9.]*\).*/\1/p' "$METRICS" | awk 'NR==1 || $1>max {max=$1} END {if (NR) printf "%.3f", max}')
 [[ -n "$p95" && "$p95" != '-1.000' ]] || { echo 'ERROR: p95 latency missing'; exit 1; }
 awk -v p95="$p95" 'BEGIN {exit !(p95 < 150.0)}' || { echo "ERROR: p95 latency ${p95}ms >= 150ms"; exit 1; }
 echo "latency_window_max_p95_ms=$p95"
