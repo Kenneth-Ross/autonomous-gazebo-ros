@@ -66,3 +66,9 @@ After the soak completes, stop the receiver launched by hand. Run the receiver-o
 ```
 
 Do not run this concurrently with the soak or another `/camera_decoder`.
+
+Bit-exact depth check with receiver active:
+
+```bash
+./scripts/validation/camera_depth_integrity.sh 30
+```

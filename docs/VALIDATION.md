@@ -76,6 +76,15 @@ cd /path/to/ros2_gazebo
 
 The non-perturbing soak reads decoder-internal latency windows and fails automatically if paired rate averages below 29.5 FPS, the pairing queue exceeds 16 entries, drop/malformed counters grow, DDS/codec errors appear, p95 simulated capture-to-publication latency reaches 150 ms, thread count grows by more than two, or RSS grows above 5% after the 60-second warm-up. It emits one pasteable summary and retains a UTC-stamped evidence log.
 
+Run bit-exact depth validation while camera-only receiver is active:
+
+```bash
+cd /path/to/ros2_gazebo
+./scripts/validation/camera_depth_integrity.sh 30
+```
+
+The checker subscribes to actual Zstd wire frames and edge-decoded depth, matches exact timestamps with bounded queues, decodes through system libzstd, and compares header metadata plus every `16UC1` byte. Success requires 30 matched frames and zero pixel error.
+
 After the soak, stop the existing receiver and run the Orange Pi adversarial sequence:
 
 ```bash
