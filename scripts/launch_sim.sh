@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -euo pipefail
 
 # Configuration
-WORKSPACE_DIR="/home/k-dev/dev/ros2_gazebo/ros2_ws"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd -- "$SCRIPT_DIR/../server_sim" && pwd)"
 PACKAGE_NAME="my_gazebo_package"
 LAUNCH_FILE="gazebo.launch.py"
 
@@ -19,12 +22,18 @@ export __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.js
 export QT_QPA_PLATFORM=xcb
 
 # 2. Source ROS2 and Workspace
-if [ -f "/opt/ros/jazzy/setup.bash" ]; then
-    source /opt/ros/jazzy/setup.bash
+if [ ! -f "/opt/ros/jazzy/setup.bash" ]; then
+    echo "Error: ROS 2 Jazzy was not found at /opt/ros/jazzy." >&2
+    exit 1
 fi
+set +u
+source /opt/ros/jazzy/setup.bash
+set -u
 
 if [ -f "$WORKSPACE_DIR/install/setup.bash" ]; then
+    set +u
     source "$WORKSPACE_DIR/install/setup.bash"
+    set -u
 else
     echo "Error: Workspace setup.bash not found. Did you build the project?"
     exit 1
@@ -33,8 +42,8 @@ fi
 # 3. Handle Arguments
 # Usage: ./launch_sim.sh [track_name] [headless_true_false]
 # Track names: oval, figure_eight, hairpin, slalom, rectangle, random (default)
-TRACK_NAME=${1:-"random"}
-HEADLESS=${2:-"false"}
+TRACK_NAME=${1:-random}
+HEADLESS=${2:-false}
 
 echo "------------------------------------------------"
 echo "Launching ROS2 Gazebo Simulation"
@@ -42,15 +51,22 @@ echo "Initial Track: $TRACK_NAME"
 echo "Headless Mode: $HEADLESS"
 echo "------------------------------------------------"
 
-# 4. Cleanup old processes (Optional but recommended)
-pkill -9 -f "gz sim" || true
-pkill -9 -f "ros2" || true
-
-# 5. Launch
-trap "kill 0" EXIT
+# 4. Launch. Only stop the stream launch started by this script; do not kill
+# unrelated ROS or Gazebo processes on the machine.
+STREAM_PID=""
+cleanup() {
+    trap - EXIT INT TERM
+    if [[ -n "$STREAM_PID" ]] && kill -0 "$STREAM_PID" 2>/dev/null; then
+        kill -TERM "$STREAM_PID" 2>/dev/null || true
+        wait "$STREAM_PID" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT INT TERM
 
 echo "Starting OAK-D Stream Sender..."
-ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=10.10.12.9 &
+ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py &
+STREAM_PID=$!
 
 echo "Starting Gazebo Simulation..."
-ros2 launch $PACKAGE_NAME $LAUNCH_FILE initial_track:=$TRACK_NAME headless:=$HEADLESS
+ros2 launch "$PACKAGE_NAME" "$LAUNCH_FILE" \
+    "initial_track:=$TRACK_NAME" "headless:=$HEADLESS"

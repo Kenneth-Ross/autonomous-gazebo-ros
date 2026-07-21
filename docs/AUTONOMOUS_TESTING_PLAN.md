@@ -1,4 +1,6 @@
-# Autonomous Navigation: Validation & Testing Plan (Sim-to-Real)
+# [PLAN] Autonomous Navigation: Validation & Testing Plan (Sim-to-Real)
+
+> **Planned acceptance procedure:** Requirements below are not pass results. See [VALIDATION.md](VALIDATION.md).
 
 ## 1. Overview
 This plan establishes a rigid protocol to verify the **Brain-ECU (v11)** architecture. Testing is hierarchical: we first verify the low-level safety "reflexes" (ECU), then the high-level geometric intent (Brain), and finally the integrated autonomous performance.

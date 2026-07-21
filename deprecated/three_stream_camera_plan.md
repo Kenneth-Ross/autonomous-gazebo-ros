@@ -1,9 +1,9 @@
-# [DEPRECATED] Plan: Gazebo OAK-D Camera Streaming to Edge Device for Computer Vision
+# Plan: Gazebo OAK-D Camera Streaming to Edge Device for Computer Vision
 
-**Note: This plan is deprecated. It describes a 3-stream approach that has been replaced by the Bit-Split single-stream strategy for RGB-D synchronization. See `../docs/STREAMING_CONTRACT.md`.**
+> **Historical plan:** Not the current packed RGB-D transport. See [`docs/STREAMING_CONTRACT.md`](../docs/STREAMING_CONTRACT.md).
 
 ## Objective:
-Establish an efficient camera streaming pipeline for the **three distinct camera streams (RGB, Left, Right)** from a Gazebo OAK-D camera simulation over an Ethernet port to an edge device.
+Establish an efficient camera streaming pipeline for the **three distinct camera streams (RGB, Left, Right)** from a Gazebo OAK-D camera simulation over an Ethernet port to an edge device. This setup will enable subsequent computer vision processing within a ROS2 environment, prioritizing low latency, efficient bandwidth usage, and minimal CPU overhead on the edge device.
 
 ## Approach:
 A hybrid approach will be used: Gazebo will provide simulated camera data for RGB, Left, and Right cameras via separate ROS2 topics. Dedicated ROS2 nodes will then bridge these data streams to GStreamer for high-performance, codec-driven network streaming and decoding, leveraging hardware acceleration on the edge device. Finally, ROS2 will integrate the decoded video frames for computer vision processing and overall system management.

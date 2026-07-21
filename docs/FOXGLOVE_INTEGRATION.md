@@ -1,108 +1,75 @@
-# Foxglove Integration & Digital Twin Architecture
+# [W.I.P] Foxglove Integration
 
-This document describes the architecture for remote visualization and the "Digital Twin" ground truth integration used in this project.
+This document describes the Foxglove bridge instantiated by `rtabmap_slam.launch.py`. It is implementation documentation, not proof that remote access or visualization has been tested; record those results in [VALIDATION.md](VALIDATION.md).
 
-## Table of Contents
-1. [Overview](#overview)
-2. [Data Flow Diagram](#data-flow-diagram)
-3. [Ground Truth Path](#ground-truth-path)
-4. [Edge Visualization (Orange Pi)](#edge-visualization-orange-pi)
-5. [Remote Monitoring & Island Strategy](#remote-monitoring--island-strategy)
-6. [Digital Twin Debugging Guide](#digital-twin-debugging-guide)
+## Active bridge
 
----
+The edge launch starts `foxglove_bridge` with:
 
-## Overview
+- bind address `0.0.0.0`;
+- WebSocket port `8765`;
+- hidden topics excluded;
+- services disabled through a non-matching whitelist;
+- client publishing, parameter, connection-graph, and asset capabilities enabled.
 
-The system uses **Foxglove Studio** for remote monitoring. To maintain high performance on the Edge device (Orange Pi 5) while allowing remote debugging, we employ an **"Island Strategy"**:
-- **High-Bandwidth Data (RGB-D)**: Stays on the local `wlan0` network between the Host and the Edge.
-- **Low-Bandwidth Metadata (TFs, Pose, Status)**: Streamed over **Tailscale VPN** to remote clients via the **Foxglove Bridge**.
+The topic whitelist permits:
 
-A key feature is the **Digital Twin**, where the Gazebo ground truth pose is sent to the Edge device to allow side-by-side comparison with the SLAM-estimated pose.
+- `/tf` and `/tf_static`;
+- `/map` and `/odometry/filtered`;
+- `/rtabmap/*`;
+- `/edge/camera/rgb/image_raw/compressed`;
+- `/edge/camera/depth/image_raw/compressed`;
+- `/yolo/*`.
 
-## Data Flow Diagram
+Raw RGB and depth image topics are intentionally absent. Changing this whitelist changes remote bandwidth and exposure and should be treated as an interface change.
+
+## Current data flow
 
 ```mermaid
-graph TD
-    subgraph Host_Machine [Host Machine (Gazebo Sim)]
-        GZ[Gazebo Sim] -->|PosePublisher 30Hz| GZ_TOPIC[/model/my_robot/pose/]
-        GZ_TOPIC -->|gz.msgs.Pose_V| GZ_BRIDGE[ros_gz_bridge]
-        GZ_BRIDGE -->|tf2_msgs/TFMessage| ROS_GT_TOPIC[/ground_truth/tf/]
-    end
-
-    subgraph Orange_Pi [Orange Pi 5 (Edge Device)]
-        ROS_GT_TOPIC -->|wlan0 / CycloneDDS| GT_BROADCASTER[ground_truth_broadcaster]
-        GT_BROADCASTER -->|Local /tf| TF_TREE[TF Tree: world -> ground_truth_base_link]
-        STATIC_TF[static_transform_publisher] -->|Local /tf| TF_TREE
-        TF_TREE -->|Metadata| FOX_BRIDGE[Foxglove Bridge :8765]
-        
-        RTAB[RTAB-Map SLAM] -->|Metadata| FOX_BRIDGE
-        RTAB -->|Local /tf| TF_TREE
-    end
-
-    subgraph Remote_Client [Remote Client (Foxglove Studio)]
-        FOX_BRIDGE -->|Tailscale VPN| FOX_STUDIO[Foxglove Studio]
-    end
-
-    style Host_Machine fill:#f9f,stroke:#333,stroke-width:2px
-    style Orange_Pi fill:#bbf,stroke:#333,stroke-width:2px
-    style Remote_Client fill:#dfd,stroke:#333,stroke-width:2px
+flowchart LR
+  GZ["Gazebo host"] -->|"/ground_truth/tf over ROS 2/DDS"| GT["ground_truth_broadcaster"]
+  GT --> TF["edge /tf"]
+  SLAM["RTAB-Map and EKF"] --> META["map, odometry, RTAB-Map topics"]
+  DEC["camera decoder"] --> COMP["compressed RGB/depth"]
+  TF --> FOX["foxglove_bridge :8765"]
+  META --> FOX
+  COMP --> FOX
+  FOX --> CLIENT["Foxglove client"]
 ```
 
-## Ground Truth Path
+The edge launch also publishes a static `world -> map` transform. The ground-truth broadcaster filters Gazebo pose messages for `ackermann_car`, publishes the selected transform with parent `world`, and names the child `ground_truth_base_link`.
 
-To visualize the "True" position of the robot against the SLAM estimate:
-1.  **Gazebo Side**: The `PosePublisher` plugin in the robot's URDF is configured to publish the model pose at **30Hz**.
-2.  **Bridge**: The `ros_gz_bridge` maps the Gazebo `Pose_V` message to a ROS 2 `tf2_msgs/TFMessage` on the topic `/ground_truth/tf`.
-3.  **Throttling**: By using the `PosePublisher` update frequency, we avoid saturating the network with high-frequency physics updates.
+## Network access
 
-## Edge Visualization (Orange Pi)
+The launch exposes port 8765 on every edge interface. Authentication, encryption, firewall rules, VPN access, and routing are deployment responsibilities; the repository does not configure them. If using Tailscale or another VPN, verify that the port is reachable only by intended clients.
 
-The Orange Pi runs several nodes to facilitate visualization:
-- **Foxglove Bridge**: Listens on `0.0.0.0:8765`. It provides a WebSocket interface for Foxglove Studio.
-- **Ground Truth Broadcaster**: A custom Python node that:
-    - Subscribes to `/ground_truth/tf`.
-    - Remaps the child frame from `my_robot` to `ground_truth_base_link`.
-    - Sets the parent frame to `world`.
-    - Publishes to the local `/tf` topic.
-- **Static Transform**: A `static_transform_publisher` anchors `world` to `map` at the origin, allowing the SLAM trajectory (in `map` frame) and Ground Truth (in `world` frame) to be aligned.
+CycloneDDS controls ROS traffic between host and edge. Foxglove topic whitelisting limits what the WebSocket bridge advertises, but it does not itself constrain DDS to a particular physical interface.
 
-## Remote Monitoring & Island Strategy
+## Verification
 
-| Network | Traffic Type | Purpose |
-| :--- | :--- | :--- |
-| **wlan0 (Local)** | RGB-D Images, Raw Sensors | High-bandwidth data for SLAM processing. |
-| **Tailscale (VPN)** | TFs, Markers, Low-res Poses | Remote monitoring and "Digital Twin" visualization. |
+Run on the Orange Pi after starting `rtabmap_slam.launch.py`:
 
-**CycloneDDS Configuration**: To prevent ROS 2 from attempting to send large image packets over the VPN (which causes crashes and lag), we force CycloneDDS to bind only to `wlan0`.
-
-## Digital Twin Debugging Guide
-
-If the Digital Twin or Foxglove visualization is not working, follow these steps:
-
-### 1. Verify Ground Truth Flow
-On the Orange Pi, check if the ground truth messages are arriving from the host:
 ```bash
-ros2 topic echo /ground_truth/tf
-```
-If no data appears, check the `ros_gz_bridge` on the Host machine.
-
-### 2. Check TF Tree Consistency
-The Digital Twin relies on a specific TF structure. Verify it using:
-```bash
+ros2 node info /foxglove_bridge
+ros2 topic hz /ground_truth/tf
+ros2 topic hz /odometry/filtered
+ros2 topic list | sort
+ss -ltnp | rg ':8765'
 ros2 run tf2_tools view_frames
 ```
-Expected links:
-- `world` -> `ground_truth_base_link` (via `ground_truth_broadcaster`)
-- `world` -> `map` (via `static_transform_publisher`)
-- `map` -> `odom` -> `base_link` (via SLAM/EKF)
 
-### 3. Foxglove Bridge Status
-Ensure the bridge is running and reachable:
-```bash
-netstat -tuln | grep 8765
-```
-In Foxglove Studio, connect to the Tailscale IP of the Orange Pi (e.g., `ws://100.x.y.z:8765`).
+Expected TF relationships include:
 
-### 4. Island Strategy Check
-If Foxglove is laggy, ensure you are NOT subscribing to raw image topics (e.g., `/camera/rgb/image_raw`) over the VPN. Use compressed streams or metadata-only views for remote monitoring.
+- `world -> ground_truth_base_link` from `ground_truth_broadcaster` when host poses arrive;
+- `world -> map` from the edge static publisher;
+- the localization chain required by the running SLAM/EKF configuration.
+
+Connect Foxglove to `ws://<orange-pi-address>:8765` only over a trusted network. Verify panels using whitelisted topics, then monitor edge CPU and network use while compressed images are visible.
+
+## Troubleshooting
+
+- No listener on 8765: inspect `/foxglove_bridge` startup logs and package availability.
+- Listener exists but the client cannot connect: check routing, firewall, VPN policy, and the selected Orange Pi address.
+- Missing ground truth: verify `/ground_truth/tf` on both host and edge and check that the Gazebo model name matches `ackermann_car`.
+- Missing map or odometry: diagnose RTAB-Map/EKF independently before Foxglove.
+- High remote bandwidth: inspect subscribed panels and keep raw camera topics out of the whitelist.

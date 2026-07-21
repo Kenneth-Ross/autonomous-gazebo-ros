@@ -1,6 +1,6 @@
 # [DEPRECATED] Edge Device SLAM Inference System (ORB-SLAM3)
 
-**Note: This plan has been superseded by the RTAB-Map strategy in `plans/rtabmap_edge_slam_plan.md`.**
+**Note: This plan has been superseded by the RTAB-Map strategy in `rtabmap_edge_slam_plan.md`.**
 
 ## Original Objective
 Implement an edge-based SLAM inference system running on an Orange Pi 5 Pro (RK3588). The system consumes three H.264 video streams plus IMU and Odometry data over Ethernet from a Gazebo simulation. It utilizes an RKNN-accelerated YOLO model on the 6 TOPS triple-core NPU for cone detection and **ORB-SLAM3 (Visual-Inertial-Odometry)** for robust mapping and localization, fusing semantic landmarks for enhanced accuracy.

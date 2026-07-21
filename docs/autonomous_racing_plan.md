@@ -1,4 +1,6 @@
-# Autonomous Racing System — Implementation Plan
+# [W.I.P] Autonomous Racing System — Implementation Plan
+
+> **Design/implementation plan:** Phase labels do not establish verification. See [VALIDATION.md](VALIDATION.md).
 
 > Based on in-depth design interview (2026-07-03)
 
@@ -89,7 +91,7 @@ flowchart TD
 
 ### Package Structure
 ```
-ros2_ws/src/autonomous_racing/
+server_sim/src/autonomous_racing/
 ├── CMakeLists.txt
 ├── package.xml
 ├── setup.py                          # If ament_python
@@ -297,7 +299,7 @@ steering = atan2(2 * wheelbase * sin(alpha), lookahead)
 
 ## Track Spawn Point Changes
 
-### Modifications to [track_layouts.py](file:///home/k-dev/dev/ros2_gazebo/ros2_ws/src/my_gazebo_package/my_gazebo_package_py/track_layouts.py)
+### Modifications to [track_layouts.py](../server_sim/src/my_gazebo_package/my_gazebo_package_py/track_layouts.py)
 
 Each track layout gains a `spawn` field:
 
@@ -313,7 +315,7 @@ TRACK_LAYOUTS = {
 }
 ```
 
-### Modifications to [track_builder.py](file:///home/k-dev/dev/ros2_gazebo/ros2_ws/src/my_gazebo_package/my_gazebo_package_py/track_builder.py)
+### Modifications to [track_builder.py](../server_sim/src/my_gazebo_package/my_gazebo_package_py/track_builder.py)
 
 `generate_random_track()` returns a spawn point computed from the first path segment:
 
@@ -329,7 +331,7 @@ def generate_random_track(...):
     return inner_cones, outer_cones, spawn
 ```
 
-### Modifications to [gazebo.launch.py](file:///home/k-dev/dev/ros2_gazebo/ros2_ws/src/my_gazebo_package/launch/gazebo.launch.py)
+### Modifications to [gazebo.launch.py](../server_sim/src/my_gazebo_package/launch/gazebo.launch.py)
 
 The car spawn position uses the track's spawn point (communicated via a param or the orchestrator).
 
@@ -339,7 +341,7 @@ The car spawn position uses the track's spawn point (communicated via a param or
 
 ```mermaid
 sequenceDiagram
-    participant Agent as AI Agent (Antigravity)
+    participant Agent as AI Agent (Codex)
     participant Orch as test_orchestrator
     participant Sim as Gazebo Sim
     participant Tel as telemetry_recorder
@@ -398,27 +400,27 @@ ros2 service call /orchestrator/start_run autonomous_racing/srv/StartRun \
 ## Implementation Order
 
 ### Phase 1: Foundation (Do First)
-1. ✏️ Create `autonomous_racing` package skeleton
-2. ✏️ Add spawn points to track layouts + track builder
-3. ✏️ Implement `pure_pursuit_node` (core controller)
-4. ✏️ Implement `race_validator_node` (failure detection + lap progress)
-5. ✏️ Implement `telemetry_recorder_node` (data logging)
+1. [x] Create `autonomous_racing` package skeleton
+2. [x] Add spawn points to track layouts + track builder
+3. [x] Implement `pure_pursuit_node` (core controller)
+4. [x] Implement `race_validator_node` (failure detection + lap progress)
+5. [x] Implement `telemetry_recorder_node` (data logging)
 
 ### Phase 2: Path Planning
-6. ✏️ Implement `reactive_midline_node` (exploration phase)
-7. ✏️ Implement midline computation from full cone map (racing phase)
-8. ✏️ Add phase transition logic (exploration → racing after lap 1)
+6. [x] Implement `reactive_midline_node` (exploration phase)
+7. [ ] Implement midline computation from full cone map (racing phase)
+8. [ ] Add phase transition logic (exploration → racing after lap 1)
 
 ### Phase 3: Integration
-9. ✏️ Create `autonomous_race.launch.py`
-10. ✏️ Implement `test_orchestrator_node` (lifecycle + agent API)
-11. ✏️ Modify car spawn to use track spawn points
-12. ✏️ Wire up the full vision pipeline (camera → YOLO → SLAM → midline → Pure Pursuit → driving model)
+9. [x] Create `autonomous_race.launch.py`
+10. [x] Implement `test_orchestrator_node` (lifecycle + agent API)
+11. [ ] Modify car spawn to use track spawn points
+12. [ ] Wire up the full vision pipeline (camera → YOLO → SLAM → midline → Pure Pursuit → driving model)
 
 ### Phase 4: Agentic Tuning
-13. ✏️ Create analysis scripts for telemetry
-14. ✏️ Document the agent tuning workflow
-15. ✏️ Test end-to-end: spawn → race → fail → log → analyze → re-tune → re-run
+13. [ ] Create analysis scripts for telemetry
+14. [x] Document the agent tuning workflow
+15. [ ] Test end-to-end: spawn → race → fail → log → analyze → re-tune → re-run
 
 ---
 

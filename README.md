@@ -1,65 +1,53 @@
-# Autonomous Gazebo ROS
+# Autonomous Gazebo ROS 2
 
-This project enables autonomous navigation and SLAM in a Gazebo simulation by offloading heavy processing (like computer vision and SLAM) to an edge device (e.g., Orange Pi 5).
+Simulation-to-edge stack for an autonomous Ackermann vehicle. The host runs Gazebo Harmonic; the Orange Pi workspace contains decoding, perception, localization, navigation, and telemetry.
 
-## Overview
+## Status
 
-- **Simulation Host:** Runs Gazebo and ROS2. Streams camera data over the network using GStreamer or ROS2 topics.
-- **Edge Device:** Receives the stream, performs inference (YOLOv11), and runs SLAM (RTAB-Map).
-- **Communication:** Uses ROS2 for control and state, and GStreamer for high-performance video streaming.
+- **Implemented:** RGB/depth capture, horizontal RGB-D packing, HEVC through `ffmpeg_image_transport`, edge unpacking, and autonomous-racing components.
+- **Verified:** See [Validation](docs/VALIDATION.md). Source presence is not a passing host or edge test.
+- **Current sender:** `sim_camera_encoder` is the sole active super-frame producer.
 
-## Project Structure
+## Build and launch
 
-- `ros2_ws/`: ROS2 workspace for the simulation host.
-  - `my_gazebo_package`: Contains URDF models and Gazebo worlds.
-  - `gazebo_oakd_stream_sender`: Node for streaming OAK-D camera data.
-- `ros2_ws_receiver/`: ROS2 workspace for the edge device.
-  - `rtabmap_bridge`: Bridge for RTAB-Map SLAM.
-  - `edge_oakd_camera_node`: Receiver for OAK-D camera streams.
-  - `edge_nav2`: Navigation stack configuration for the edge device.
-- `external/`: Third-party dependencies.
-  - `rknpu2`: Rockchip NPU driver and API.
-- `scripts/`: Deployment and setup scripts for both host and edge device.
+Use ROS 2 Jazzy without an active Conda environment.
 
-## Getting Started
+```bash
+export PYTHONPATH=/usr/lib/python3/dist-packages:${PYTHONPATH:-}
+./scripts/check_ros_build_env.sh
+source /opt/ros/jazzy/setup.bash
+cd server_sim
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch my_gazebo_package gazebo.launch.py
+```
 
-### Prerequisites
+The sender accepts `use_sim_time`; it does not accept `host`:
 
-- ROS 2 Jazzy (for Ubuntu 24.04) or Humble (for Ubuntu 22.04)
-- Gazebo Harmonic or Ignition
-- GStreamer (with Rockchip multimedia plugins for edge devices)
+```bash
+ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py use_sim_time:=true
+```
 
-### Host Setup
+CycloneDDS configuration selects network peers/interfaces.
 
-1. Build the ROS 2 workspace:
-   ```bash
-   cd ros2_ws
-   colcon build
-   ```
-2. Launch the simulation and streamer:
-   ```bash
-   source install/setup.bash
-   ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py host:=<EDGE_DEVICE_IP>
-   ```
+### Orange Pi
 
-### Edge Device Setup
+Run on the edge device, not this simulation host:
 
-1. Run the setup script for Ubuntu 24.04:
-   ```bash
-   ./scripts/setup_orangepi_receiver.sh
-   ```
-2. Build the receiver workspace:
-   ```bash
-   cd ros2_ws_receiver
-   source /opt/ros/jazzy/setup.bash
-   colcon build
-   ```
+```bash
+source /opt/ros/jazzy/setup.bash
+cd edge_stack
+colcon build --symlink-install --merge-install
+source install/local_setup.bash
+```
 
-## Documentation
+## Current documentation
 
-- [Tutorial: Offloading Gazebo Camera Data](docs/TUTORIAL.md)
-- [RTAB-Map SLAM Plan](plans/rtabmap_edge_slam_plan.md)
+- [Active Project Audit](docs/PROJECTS.md)
+- [Current Architecture](docs/ARCHITECTURE_CURRENT.md)
+- [Streaming Contract](docs/STREAMING_CONTRACT.md)
+- [Edge Deployment](docs/EDGE_DEPLOYMENT.md)
+- [Validation](docs/VALIDATION.md)
+- [Codex Workflows](docs/CODEX_WORKFLOWS.md)
 
-## License
-
-[Add License Info Here]
+Plans and retrospectives are historical context, not proof of behavior. No project-wide license is currently declared.

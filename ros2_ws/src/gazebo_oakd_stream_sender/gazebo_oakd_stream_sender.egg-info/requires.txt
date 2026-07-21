@@ -1,7 +1,0 @@
-setuptools
-opencv-python
-PyGObject
-numpy
-
-[test]
-pytest
