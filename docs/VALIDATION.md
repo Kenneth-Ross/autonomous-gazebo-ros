@@ -38,6 +38,22 @@ coverage that runs in the deployment environment.
   above 5% after warm-up.
 - OS/kernel, FFmpeg build, MPP/RGA, `hevc_rkmpp`, ROS multimedia package inventory.
 
+## Sender restart sequence
+
+Start with simulation, sender, and edge receiver running. On Orange Pi:
+
+```bash
+./scripts/validation/camera_edge_sender_restart_monitor.sh /tmp/edge_receiver.log
+```
+
+After it prints `READY`, run on simulation server:
+
+```bash
+./scripts/validation/camera_server_sender_restart.sh 8
+```
+
+Server script resolves exactly one encoder PID, stops only that process, holds an eight-second outage, and starts replacement sender. Edge monitor requires baseline, observable zero-rate outage, recovery to at least 29 FPS, queue maximum 16, and no DDS/FFmpeg transport failure. Both sides retain evidence.
+
 ## Required adversarial evidence
 
 Independently restart sender, receiver, Foxglove, SLAM, and NPU; interrupt Ethernet

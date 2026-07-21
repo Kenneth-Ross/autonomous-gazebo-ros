@@ -72,3 +72,11 @@ Bit-exact depth check with receiver active:
 ```bash
 ./scripts/validation/camera_depth_integrity.sh 30
 ```
+
+Sender-restart fault test monitor:
+
+```bash
+./scripts/validation/camera_edge_sender_restart_monitor.sh /tmp/edge_receiver.log
+```
+
+Wait for `READY`, then run simulation-server script documented in `docs/VALIDATION.md`.
