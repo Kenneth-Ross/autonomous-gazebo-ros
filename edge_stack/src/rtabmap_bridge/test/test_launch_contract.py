@@ -49,5 +49,9 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     landmark = (Path(__file__).parents[1] / 'rtabmap_bridge' / 'cone_landmark_processor.py').read_text()
     assert "'/edge/perception/depth/image_raw'" in landmark
     assert "'/edge/camera/depth/image_raw'" not in landmark
-    assert "declare_parameter('publish_annotated', False)" in landmark
-    assert "self.publish_annotated and self.annotated_pub.get_subscription_count()" in landmark
+    assert "'/edge/camera/rgb/image_raw/compressed'" not in landmark
+    assert "'/yolo/annotated/compressed'" not in landmark
+    detector = (Path(__file__).parents[1] / 'rtabmap_bridge' / 'cone_detector_npu.py').read_text()
+    assert "ImageMarker, '/yolo/image_annotations'" in detector
+    assert "annotation.type = ImageMarker.LINE_STRIP" in detector
+    assert "annotation.header = msg.header" in detector
