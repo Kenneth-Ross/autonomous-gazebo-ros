@@ -5,14 +5,15 @@
 - The physical link remains historically validated near 941 Mbps; current `-58` failures are treated as DDS fragmented-sample burst failures, not insufficient link bandwidth. This Jazzy build rejects CycloneDDS network channels, so unsupported pacing was reverted. The sender UDP payload ceiling was corrected from 12 MB to the Ethernet-MTU-safe 1472 B; 12 MB was an invalid interpretation of `MaxMessageSize` and could produce `EMSGSIZE` (`-58`).
 - Preliminary rerun after setting `MaxMessageSize=1472B` and `FragmentSize=1344B` no longer showed the prior DDS send failure. This is diagnostic evidence only; paired 30 FPS rate, latency, bandwidth, depth integrity, and soak results remain pending.
 - 2026-07-21 Orange Pi rerun confirmed both wire transports and best-effort KeepLast(2) edge subscriptions, about 123 Mbps combined bandwidth, and clean multimedia preflight. It failed acceptance because `pairs_published=0`; callback rates diverged and the reported timestamp gap grew by about five seconds per five-second interval. Absolute callback timestamps and five-second RGB/depth/pair rates are now emitted to isolate the lagging stage. The nominal script now fails on missing decoded fields or absent rate samples instead of reporting a false pass.
+- Root cause: Jazzy `zstd_image_transport` 4.0.7 subscriber omits the compressed message header, so every decoded depth callback carried timestamp zero. Edge now decodes the standard Zstd payload directly, retains the exact wire header, validates bounds and decoded size, and rejects malformed payloads. Automated bit-exact/header and malformed-frame tests pass; Orange Pi rerun pending.
 - Edge pairing failure traced to eager deletion of any older unmatched stamp plus reliable receive backlog. Pairer now retains unmatched stamps until bounded depth-8 capacity eviction; edge transport subscriptions request best-effort newest data; metrics report queue size and RGB-depth stamp gap. Orange Pi rerun pending.
 
-Implementation is `[W.I.P]`. On the host, `sim_camera_encoder` built and its 6 tests passed; `sim_camera_decoder` built and its 5 tests passed; `rtabmap_bridge` built in the documented system-Python environment and its 2 launch-contract tests passed. The installed launch exposed all isolation, preview, peer, interface, and local-address arguments. No Orange Pi or end-to-end result is claimed.
+Implementation is `[W.I.P]`. On the host, `sim_camera_encoder` built and its 6 tests passed; `sim_camera_decoder` built and its 6 tests passed; `rtabmap_bridge` built in the documented system-Python environment and its 2 launch-contract tests passed. The installed launch exposed all isolation, preview, peer, interface, and local-address arguments. No Orange Pi or end-to-end result is claimed.
 
 Automated acceptance covers depth boundary conversion, exact timestamp matching,
 missing/duplicate/out-of-order input, bounded queues, launch flag dependencies,
 and DDS interface/address XML. Still required before `[VERIFICATION]`: retained
-nominal and adversarial Orange Pi evidence and automated Zstd round-trip/contract
+nominal and adversarial Orange Pi evidence and remaining end-to-end contract
 coverage that runs in the deployment environment.
 
 ## Required nominal evidence

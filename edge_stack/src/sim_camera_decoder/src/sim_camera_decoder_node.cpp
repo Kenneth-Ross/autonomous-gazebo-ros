@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <thread>
 #include "sim_camera_decoder/exact_pairer.hpp"
+#include "sim_camera_decoder/zstd_depth_decoder.hpp"
 
 class SimCameraDecoder : public rclcpp::Node
 {
@@ -53,9 +54,20 @@ public:
     rgb_sub_ = image_transport::create_subscription(this, "/oakd/rgb/image_raw",
         [this](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {enqueue_rgb(msg);},
       "ffmpeg", wire_qos);
-    depth_sub_ = image_transport::create_subscription(this, "/oakd/depth/image_raw",
-        [this](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {enqueue_depth(msg);},
-      "zstd", wire_qos);
+    depth_sub_ = create_subscription<sensor_msgs::msg::CompressedImage>(
+      "/oakd/depth/image_raw/zstd",
+      rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(wire_qos), wire_qos),
+      [this](const sensor_msgs::msg::CompressedImage::ConstSharedPtr msg) {
+        auto decoded = std::make_shared<sensor_msgs::msg::Image>();
+        std::string error;
+        if (!sim_camera_decoder::decode_zstd_image(*msg, *decoded, error)) {
+          {std::lock_guard<std::mutex> lock(mutex_); ++malformed_;}
+          RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "depth Zstd decode failed: %s",
+            error.c_str());
+          return;
+        }
+        enqueue_depth(decoded);
+      });
     pair_thread_ = std::thread([this]() {pair_worker();});
     if (preview_) {preview_thread_ = std::thread([this]() {preview_worker();});}
     timer_ = create_wall_timer(std::chrono::seconds(5), [this]() {report();});
@@ -173,7 +185,8 @@ private:
       pairer_.high_water(), static_cast<long long>(rgb_stamp_ns),
       static_cast<long long>(depth_stamp_ns), stamp_gap_ns, malformed_, previews_);
   }
-  image_transport::Subscriber rgb_sub_, depth_sub_;
+  image_transport::Subscriber rgb_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr depth_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr rgb_info_pub_, depth_info_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr rgb_preview_pub_,
