@@ -19,8 +19,8 @@
 - First edge adversarial run passed receiver restart and malformed rejection but exposed two test defects: expected corrupt-frame warnings were classified as transport failures, and the slow probe subscribed to unbounded 30 FPS raw RGB instead of the production bounded 5 FPS preview used by NPU/Foxglove. It also confirmed `hevc_rkmpp` rejects `flags:low_delay` with `Option not found`; that default was removed. Harness now tests the production preview path and requires at least 29 FPS with no drop growth during load. Rerun pending.
 - Corrected Orange Pi adversarial sequence passed receiver stop/restart recovery, bounded slow preview consumption, malformed Zstd rejection, and post-fault recovery. Slow-load pair rate stayed at least 30.2 FPS with zero drop growth; three corrupt frames produced three rejections; final recovery reached 30.4 FPS. Evidence: `camera_edge_adversarial_20260721T195926Z.log`.
 - Orange Pi wire-to-edge depth integrity passed for 30 exact-timestamp frames with metadata equality and zero byte/pixel error. Evidence: `camera_depth_integrity_20260721T200517Z.log`.
-- Initial sender-restart behavior recovered, but harness killed encoder child instead of owning launcher and did not prove a clean DDS zero-to-one publisher transition. Evidence is diagnostic only. Corrected harness owns launcher tree and requires zero publishers before restart plus exactly one publisher per stream after restart; rerun pending.
-- Second sender-restart harness proved DDS zero-to-one ownership but omitted `GZ_IP=127.0.0.1`; replacement node advertised topics then stopped receiving Gazebo frames. Its PASS is invalid. Harness now requires nonzero server RGB/depth counters and two distinct healthy edge metric windows; rerun pending.
+- Initial sender-restart behavior recovered, but harness killed encoder child instead of owning launcher and did not prove a clean DDS zero-to-one publisher transition. Evidence is diagnostic only. Corrected harness owns launcher tree and requires zero publishers before restart plus exactly one publisher per stream after restart. User removed sender-restart recovery from mandatory completion scope; optional rerun pending.
+- Second sender-restart harness proved DDS zero-to-one ownership but omitted `GZ_IP=127.0.0.1`; replacement node advertised topics then stopped receiving Gazebo frames. Its PASS is invalid. Harness now requires nonzero server RGB/depth counters and two distinct healthy edge metric windows; optional rerun pending.
 - Physical dedicated-Ethernet interruption passed. Edge observed 0 FPS during disconnect, retained queue maximum 1 with no new drops, rediscovered DDS after reconnect, and recovered to 30.4 FPS with post-recovery p95 around 92-95 ms. Evidence: `camera_edge_sender_restart_20260721T201433Z.log`.
 
 Implementation is `[W.I.P]`. On the host, `sim_camera_encoder` built and its 6 tests passed; `sim_camera_decoder` built and its 6 tests passed; `rtabmap_bridge` built in the documented system-Python environment and its 2 launch-contract tests passed. The installed launch exposed all isolation, preview, peer, interface, and local-address arguments. No Orange Pi or end-to-end result is claimed.
@@ -41,7 +41,7 @@ coverage that runs in the deployment environment.
   above 5% after warm-up.
 - OS/kernel, FFmpeg build, MPP/RGA, `hevc_rkmpp`, ROS multimedia package inventory.
 
-## Sender restart sequence
+## Optional sender restart sequence
 
 Start with simulation, sender, and edge receiver running. On Orange Pi:
 
@@ -57,7 +57,7 @@ After it prints `READY`, run on simulation server:
 
 Server script resolves exactly one encoder PID, stops only that process, holds an eight-second outage, and starts replacement sender. Edge monitor requires baseline, observable zero-rate outage, recovery to at least 29 FPS, queue maximum 16, and no DDS/FFmpeg transport failure. Both sides retain evidence.
 
-## Missing-stream sequence
+## Optional missing-stream sequence
 
 After rebuilding and restarting server sender, run edge monitor:
 
