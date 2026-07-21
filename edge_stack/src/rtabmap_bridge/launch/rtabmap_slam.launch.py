@@ -37,7 +37,7 @@ def launch_setup(context):
                   ('depth/camera_info', '/edge/camera/depth/camera_info')]
         components.extend([
             ComposableNode(package='rtabmap_odom', plugin='rtabmap_odom::RGBDOdometry',
-                           name='rgbd_odometry', parameters=[common], remappings=remaps,
+                           name='rgbd_odometry', parameters=[dict(common, qos=2)], remappings=remaps,
                            extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(package='rtabmap_slam', plugin='rtabmap_slam::CoreWrapper',
                            name='rtabmap', parameters=[dict(common, subscribe_depth=True,

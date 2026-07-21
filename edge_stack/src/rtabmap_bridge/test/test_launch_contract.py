@@ -39,6 +39,7 @@ def test_npu_requires_explicit_existing_model():
 def test_slam_uses_sensor_data_qos_for_raw_images():
     launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
     assert "'qos_image': 2" in launch
+    assert "parameters=[dict(common, qos=2)]" in launch
     assert "'qos_camera_info': 1" in launch
     assert "'sync_queue_size': 2" in launch
     assert "'queue_size': 2" not in launch
