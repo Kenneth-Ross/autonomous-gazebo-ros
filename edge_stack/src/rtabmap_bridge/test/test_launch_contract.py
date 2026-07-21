@@ -49,3 +49,5 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     landmark = (Path(__file__).parents[1] / 'rtabmap_bridge' / 'cone_landmark_processor.py').read_text()
     assert "'/edge/perception/depth/image_raw'" in landmark
     assert "'/edge/camera/depth/image_raw'" not in landmark
+    assert "declare_parameter('publish_annotated', False)" in landmark
+    assert "self.publish_annotated and self.annotated_pub.get_subscription_count()" in landmark

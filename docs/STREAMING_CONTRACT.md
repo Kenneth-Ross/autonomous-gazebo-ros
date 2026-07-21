@@ -27,6 +27,8 @@ backpressure to raw camera publication.
 Camera-only operation is the launch default; preview, Foxglove, SLAM, NPU, and landmarks are opt-in.
 
 Landmark processing consumes `/edge/perception/depth/image_raw`, published by the bounded preview worker with the same timestamp and rate as YOLO RGB input. It must not subscribe to the 30 FPS full-resolution public depth topic from its separate Python process.
+Annotated landmark JPEG generation is disabled by default (`publish_annotated=false`) because Foxglove topic discovery otherwise triggers synchronous Python JPEG decode, drawing, and re-encode. Detections and marker outputs remain available; annotated output is explicit opt-in observability.
+
 
 Full-stack SLAM consumes an internal exact-pair feed on `/edge/slam/{rgb,depth}/{image_raw,camera_info}`. The decoder gates this newest synchronized feed to configurable `slam_rate_hz` (default 10 Hz), while public `/edge/camera/...` sensor outputs remain 30 FPS. Both image feeds use best-effort KeepLast(1); CameraInfo remains reliable KeepLast(1).
 

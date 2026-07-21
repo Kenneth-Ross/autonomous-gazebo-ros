@@ -31,6 +31,7 @@ class ConeLandmarkProcessor(Node):
         # List of dicts: {'position': np.array([x, y, z]), 'class': str, 'hits': int}
         self.candidates = []
         self.min_hits = 2
+        self.publish_annotated = self.declare_parameter('publish_annotated', False).value
         
         self.next_landmark_id = 1
         
@@ -91,7 +92,7 @@ class ConeLandmarkProcessor(Node):
             return
             
         # Check if anyone is actually subscribing to the annotated image topic to save CPU
-        if self.annotated_pub.get_subscription_count() > 0:
+        if self.publish_annotated and self.annotated_pub.get_subscription_count() > 0:
             try:
                 np_arr = np.frombuffer(rgb_msg.data, np.uint8)
                 cv_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
