@@ -2,11 +2,20 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+EDGE_WORKSPACE="${EDGE_WORKSPACE:-$REPO_ROOT/edge_stack}"
 LOG="${1:-/tmp/edge_receiver.log}"
 EVIDENCE_DIR="${2:-$REPO_ROOT/validation_evidence}"
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"; OUTPUT="$EVIDENCE_DIR/camera_edge_missing_streams_$RUN_ID.log"
 [[ -f "$LOG" ]] || { echo 'ERROR: receiver log missing'; exit 2; }
+[[ -f "$EDGE_WORKSPACE/install/setup.bash" ]] || { echo 'ERROR: edge workspace not built'; exit 2; }
 START=$(( $(wc -l < "$LOG") + 1 )); mkdir -p "$EVIDENCE_DIR"; exec > >(tee -a "$OUTPUT") 2>&1
+set +u; source /opt/ros/jazzy/setup.bash; source "$EDGE_WORKSPACE/install/setup.bash"; set -u
+publisher_count() { ros2 topic info "$1" 2>/dev/null | sed -n 's/Publisher count: //p' | head -1; }
+rgb_publishers="$(publisher_count /oakd/rgb/image_raw/ffmpeg)"
+depth_publishers="$(publisher_count /oakd/depth/image_raw/zstd)"
+[[ "$rgb_publishers" == 1 && "$depth_publishers" == 1 ]] || {
+  echo "ERROR: expected one publisher per stream, got rgb=${rgb_publishers:-missing} depth=${depth_publishers:-missing}"; exit 2;
+}
 line() { tail -n +"$START" "$LOG" | grep 'camera_decoder.*pair_rate=' | tail -1 || true; }
 field() { sed -n "s/.*$1=\\([^ ]*\\).*/\\1/p" <<< "$2"; }
 wait_state() {
