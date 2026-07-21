@@ -1,5 +1,5 @@
 import os
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
@@ -7,6 +7,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    get_package_prefix('zstd_image_transport')  # Fail clearly when the depth plugin is absent.
     config = os.path.join(
         get_package_share_directory('gazebo_oakd_stream_sender'),
         'config', 'cyclonedds.xml')

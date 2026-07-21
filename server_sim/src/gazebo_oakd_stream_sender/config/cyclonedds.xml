@@ -12,9 +12,6 @@
             <SocketSendBufferSize min="10MB"/>
         </Internal>
         <Discovery>
-            <Peers>
-                <Peer address="10.10.12.9"/>
-            </Peers>
             <ParticipantIndex>auto</ParticipantIndex>
         </Discovery>
     </Domain>

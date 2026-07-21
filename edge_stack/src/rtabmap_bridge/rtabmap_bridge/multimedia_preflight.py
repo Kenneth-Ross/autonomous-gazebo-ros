@@ -20,13 +20,15 @@ class MultimediaPreflight(Node):
         encoders = output(['ffmpeg', '-hide_banner', '-encoders'])
         packages = {name: output(['ros2', 'pkg', 'prefix', name]) for name in (
             'ffmpeg_image_transport', 'ffmpeg_encoder_decoder', 'zstd_image_transport')}
-        self.get_logger().warning(
-            'Orange Pi multimedia inventory (development mismatches warn): OS=%s kernel=%s '
-            'ffmpeg=%s hevc_rkmpp=%s MPP=%s RGA=%s ROS_packages=%s',
-            os_release, platform.release(), ffmpeg[0] if ffmpeg else 'unavailable',
-            'available' if 'hevc_rkmpp' in encoders else 'unavailable',
-            output(['ldconfig', '-p']).count('librockchip_mpp'),
-            output(['ldconfig', '-p']).count('librga'), packages)
+        message = (
+            f"Orange Pi multimedia inventory (development mismatches warn): "
+            f"OS={os_release} kernel={platform.release()} "
+            f"ffmpeg={ffmpeg[0] if ffmpeg else 'unavailable'} "
+            f"hevc_rkmpp={'available' if 'hevc_rkmpp' in encoders else 'unavailable'} "
+            f"MPP={output(['ldconfig', '-p']).count('librockchip_mpp')} "
+            f"RGA={output(['ldconfig', '-p']).count('librga')} "
+            f"ROS_packages={packages}")
+        self.get_logger().warning(message)
 
 
 def main(args=None):

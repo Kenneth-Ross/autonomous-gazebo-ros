@@ -39,6 +39,7 @@ are enabled without both NPU and SLAM. Do not keep a second active CycloneDDS fi
 the generated launch XML is canonical for this pipeline.
 
 Server sender:
+nThe server and Orange Pi must both resolve `ros2 pkg prefix zstd_image_transport` before launch.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
