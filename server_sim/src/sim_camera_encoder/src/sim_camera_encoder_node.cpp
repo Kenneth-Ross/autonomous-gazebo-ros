@@ -32,6 +32,11 @@ public:
     rgb_encoder_.addAVOption(
       "preset", declare_parameter<std::string>(rgb_base + "preset", "p1"));
     rgb_encoder_.addAVOption("tune", declare_parameter<std::string>(rgb_base + "tune", "ull"));
+    rgb_encoder_.addAVOption(
+      "zerolatency", declare_parameter<std::string>(rgb_base + "zerolatency", "1"));
+    rgb_encoder_.addAVOption("delay", declare_parameter<std::string>(rgb_base + "delay", "0"));
+    rgb_encoder_.addAVOption(
+      "rc-lookahead", declare_parameter<std::string>(rgb_base + "rc_lookahead", "0"));
     rgb_encoder_.setBitRate(declare_parameter<int>(rgb_base + "bit_rate", 20000000));
     rgb_encoder_.setGOPSize(declare_parameter<int>(rgb_base + "gop_size", 10));
     rgb_encoder_.setMaxBFrames(declare_parameter<int>(rgb_base + "max_b_frames", 0));
