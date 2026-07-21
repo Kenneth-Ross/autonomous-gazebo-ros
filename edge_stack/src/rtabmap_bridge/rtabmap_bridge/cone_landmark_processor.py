@@ -9,7 +9,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, TextAnnotation, Point2
 from cv_bridge import CvBridge
 import numpy as np
-import message_filters
+from collections import OrderedDict
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from tf2_ros import Buffer, TransformListener
 import tf2_geometry_msgs
@@ -51,26 +51,38 @@ class ConeLandmarkProcessor(Node):
             pipeline_qos
         )
         
-        self.depth_sub = message_filters.Subscriber(
-            self, Image, '/edge/perception/depth/image_raw', qos_profile=pipeline_qos
-        )
-        self.yolo_sub = message_filters.Subscriber(
-            self, Detection2DArray, '/yolo/detections', qos_profile=10
-        )
-        
-        # Exact timestamp synchronizer with bounded queues
-        self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.depth_sub, self.yolo_sub], queue_size=8, slop=0.0
-        )
-        self.ts.registerCallback(self.callback)
+        self.depth_frames = OrderedDict()
+        self.depth_sub = self.create_subscription(
+            Image, '/edge/perception/depth/image_raw', self.depth_callback, pipeline_qos)
+        self.yolo_sub = self.create_subscription(
+            Detection2DArray, '/yolo/detections', self.detection_callback, 10)
         
         # Publisher for RTAB-Map Landmarks
-        self.landmark_pub = self.create_publisher(LandmarkDetections, '/rtabmap/landmark_detections', 10)
+        self.landmark_pub = self.create_publisher(LandmarkDetections, '/edge/landmark_detections', 10)
         # Publisher for Foxglove Visualization
         self.marker_pub = self.create_publisher(MarkerArray, '/yolo/landmark_markers', 10)
         self.annotation_pub = self.create_publisher(
             ImageAnnotations, '/yolo/image_annotations', pipeline_qos)
         self.get_logger().info("Cone Landmark Processor (Robust Tracker) initialized.")
+
+    @staticmethod
+    def stamp_key(header):
+        return (header.stamp.sec, header.stamp.nanosec)
+
+    def depth_callback(self, msg):
+        key = self.stamp_key(msg.header)
+        self.depth_frames[key] = msg
+        self.depth_frames.move_to_end(key)
+        while len(self.depth_frames) > 8:
+            self.depth_frames.popitem(last=False)
+
+    def detection_callback(self, msg):
+        depth_msg = self.depth_frames.pop(self.stamp_key(msg.header), None)
+        if depth_msg is None:
+            self.get_logger().warn(
+                'No exact depth match for delayed detection', throttle_duration_sec=2.0)
+            return
+        self.callback(depth_msg, msg)
 
     def info_callback(self, msg):
         self.camera_info = msg

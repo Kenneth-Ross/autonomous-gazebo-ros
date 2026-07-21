@@ -44,7 +44,7 @@ def launch_setup(context):
                            name='rtabmap', parameters=[dict(common, subscribe_depth=True,
                            subscribe_rgb=True, subscribe_landmarks=enabled['enable_landmarks'],
                            map_frame_id='map', odom_frame_id='odom')], remappings=remaps +
-                           [('landmarks', '/rtabmap/landmark_detections')],
+                           [('landmarks', '/edge/landmark_detections')],
                            extra_arguments=[{'use_intra_process_comms': True}])])
     actions = [
         SetEnvironmentVariable('CYCLONEDDS_URI', cyclone_uri(interface, local, peer)),
