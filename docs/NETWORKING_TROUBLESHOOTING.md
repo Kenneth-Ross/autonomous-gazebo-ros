@@ -4,6 +4,34 @@
 
 This guide combines current diagnostics with historical incidents from the Virtual OAK-D integration. Do not treat historical addresses, interfaces, throughput, or fixes as current acceptance evidence.
 
+## Current incident: `ddsi_udp_conn_write` return code `-58`
+
+For the 1280x800 split RGB/depth pipeline, RGB reached the Orange Pi at about 30 FPS through `hevc_rkmpp`, while depth delivered only two samples and the sender repeatedly logged:
+
+```text
+ddsi_udp_conn_write to udp/10.10.12.9:7415 failed with retcode -58
+```
+
+The destination was the live Orange Pi DDS participant, not necessarily a stale static peer. CycloneDDS `-58` is `DDS_RETCODE_NOT_ENOUGH_SPACE`; it can represent an oversized UDP message (`EMSGSIZE`) as well as other space-related socket failures. Check the deployed XML before assuming insufficient physical bandwidth or changing kernel settings.
+
+The root cause in this incident was `<MaxMessageSize>12MB</MaxMessageSize>`. CycloneDDS defines `MaxMessageSize` as the maximum UDP payload it generates, not the maximum DDS sample size. The 2 MB depth sample is fragmented at the DDSI layer, but the 12 MB ceiling allowed oversized UDP messages. The validated sender values are:
+
+```xml
+<MaxMessageSize>1472B</MaxMessageSize>
+<FragmentSize>1344B</FragmentSize>
+```
+
+`1472B` keeps the UDP payload within a 1500-byte Ethernet MTU; `1344B` leaves room for DDSI metadata. This change stopped the observed `-58` failure in the preliminary hardware rerun without sysctl, interface-queue, bandwidth-throttling, TCP, or IP-fragmentation changes. Rate, latency, loss, and soak acceptance still require measurement.
+
+Validation rules for future DDS XML changes:
+
+1. Inspect the installed copy selected by `ros2 pkg prefix`, not only `src/`.
+2. Start a fresh ROS node with the candidate `CYCLONEDDS_URI`; `ros2 topic list` may reuse the daemon and fail to parse the candidate XML.
+3. Treat `unknown element` as a build-feature/schema failure. Jazzy on this server rejects `<Channels>`, even though channel definitions exist behind compile-time guards in installed headers.
+4. Confirm the route and ARP entry before calling a logged peer address stale.
+5. Use the retained `iperf3` evidence to separate link capacity from DDS packetization, but do not treat historical throughput as current acceptance.
+
+
 ## 1. Problem: Data Starvation & Discovery Failures
 **Symptoms:**
 - ROS 2 nodes could "see" each other in the graph (`ros2 node list` worked), but actual data topics like `/edge/camera/rgb/image_raw` or `/clock` showed 0 Hz on the receiver.
@@ -120,7 +148,7 @@ To definitively prove whether physical network bandwidth or kernel routing was c
 ```
 **Historical conclusion:**
 The tested link at that time was a healthy Gigabit connection capable of pushing **110 MB/s** with **0 retries** and 0 drops. For that run, this reduced the likelihood that the physical link was the bottleneck; it does not validate the current deployment.
-The `-58` `ENOBUFS` errors were purely an architectural limitation of CycloneDDS attempting to unicast duplicate 5MB image fragments to multiple local ROS 2 ports simultaneously. To solve this, **ROS 2 Intra-Process Communication (IPC)** was implemented via a `ComposableNodeContainer` for the vision pipeline, bypassing UDP socket buffers entirely for intra-device data sharing.
+In that earlier packed-frame incident, duplicate large samples to multiple local ROS 2 endpoints caused buffer pressure. Do not generalize `-58` to `ENOBUFS`: the current split-depth incident demonstrated that the same CycloneDDS return code can result from an oversized generated UDP payload (`EMSGSIZE`). To solve this, **ROS 2 Intra-Process Communication (IPC)** was implemented via a `ComposableNodeContainer` for the vision pipeline, bypassing UDP socket buffers entirely for intra-device data sharing.
 
 ---
 
