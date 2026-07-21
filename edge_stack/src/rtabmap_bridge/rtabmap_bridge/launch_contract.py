@@ -42,8 +42,8 @@ def cyclone_uri(interface, local_address, peer_address):
         address = f' address="{local_address}"' if local_address else ''
         interface_xml = f'<Interfaces><NetworkInterface name="{interface}"{address}/></Interfaces>'
     return f'''<CycloneDDS xmlns="https://cdds.io/config"><Domain id="any"><General>
-      {interface_xml}<MaxMessageSize>12MB</MaxMessageSize><FragmentSize>1344B</FragmentSize>
-      <AllowMulticast>true</AllowMulticast></General><Internal>
-      <SocketReceiveBufferSize min="50MB"/><SocketSendBufferSize min="50MB"/></Internal>
+      {interface_xml}<MaxMessageSize>1472B</MaxMessageSize><FragmentSize>1344B</FragmentSize>
+      <AllowMulticast>spdp</AllowMulticast></General><Internal>
+      <SocketReceiveBufferSize min="10MB"/><SocketSendBufferSize min="10MB"/></Internal>
       <Discovery><Peers><Peer address="{peer_address}"/></Peers></Discovery>
       </Domain></CycloneDDS>'''

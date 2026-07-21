@@ -15,3 +15,6 @@ def test_dds_interface_address_and_peer_contract():
         validate_network('eth0', '10.10.12.99', '10.10.12.10', inventory)
     xml = cyclone_uri('eth0', '10.10.12.11', '10.10.12.10')
     assert 'name="eth0"' in xml and 'address="10.10.12.11"' in xml
+    assert '<MaxMessageSize>1472B</MaxMessageSize>' in xml
+    assert '<FragmentSize>1344B</FragmentSize>' in xml
+    assert '<MaxMessageSize>12MB</MaxMessageSize>' not in xml

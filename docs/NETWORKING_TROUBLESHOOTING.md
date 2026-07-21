@@ -21,7 +21,7 @@ The root cause in this incident was `<MaxMessageSize>12MB</MaxMessageSize>`. Cyc
 <FragmentSize>1344B</FragmentSize>
 ```
 
-`1472B` keeps the UDP payload within a 1500-byte Ethernet MTU; `1344B` leaves room for DDSI metadata. This change stopped the observed `-58` failure in the preliminary hardware rerun without sysctl, interface-queue, bandwidth-throttling, TCP, or IP-fragmentation changes. Rate, latency, loss, and soak acceptance still require measurement.
+`1472B` keeps the UDP payload within a 1500-byte Ethernet MTU; `1344B` leaves room for DDSI metadata. This change stopped the observed `-58` failure in the preliminary hardware rerun without sysctl, interface-queue, bandwidth-throttling, TCP, or IP-fragmentation changes. The identical limits must be present in edge-generated XML; raw-topic validation readers exposed a stale edge value of `12MB` by reproducing `-58` immediately. Rate, latency, loss, and soak acceptance still require measurement.
 
 Validation rules for future DDS XML changes:
 
