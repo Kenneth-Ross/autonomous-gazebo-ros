@@ -46,3 +46,6 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "'slam_rate_hz': float(cfg['slam_rate_hz'])" in launch
     assert "('rgb/image', '/edge/slam/rgb/image_raw')" in launch
     assert "('depth/image', '/edge/slam/depth/image_raw')" in launch
+    landmark = (Path(__file__).parents[1] / 'rtabmap_bridge' / 'cone_landmark_processor.py').read_text()
+    assert "'/edge/perception/depth/image_raw'" in landmark
+    assert "'/edge/camera/depth/image_raw'" not in landmark

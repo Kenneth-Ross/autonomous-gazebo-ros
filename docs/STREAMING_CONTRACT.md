@@ -26,6 +26,8 @@ JPEG/PNG preview compression uses a separate one-slot worker at
 backpressure to raw camera publication.
 Camera-only operation is the launch default; preview, Foxglove, SLAM, NPU, and landmarks are opt-in.
 
+Landmark processing consumes `/edge/perception/depth/image_raw`, published by the bounded preview worker with the same timestamp and rate as YOLO RGB input. It must not subscribe to the 30 FPS full-resolution public depth topic from its separate Python process.
+
 Full-stack SLAM consumes an internal exact-pair feed on `/edge/slam/{rgb,depth}/{image_raw,camera_info}`. The decoder gates this newest synchronized feed to configurable `slam_rate_hz` (default 10 Hz), while public `/edge/camera/...` sensor outputs remain 30 FPS. Both image feeds use best-effort KeepLast(1); CameraInfo remains reliable KeepLast(1).
 
 Edge exposes optional `rgb_decoder_av_options`, default empty. Orange Pi `hevc_rkmpp` rejected `flags:low_delay`, so it is not requested. Stage p95 metrics distinguish RGB decode, depth wire arrival, and final paired publication.

@@ -55,6 +55,8 @@ public:
       create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", info_qos);
     rgb_preview_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
       "/edge/camera/rgb/image_raw/compressed", sensor_qos);
+    perception_depth_pub_ = create_publisher<sensor_msgs::msg::Image>(
+      "/edge/perception/depth/image_raw", sensor_qos);
     depth_preview_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
       "/edge/camera/depth/image_raw/compressed", sensor_qos);
     configure_info();
@@ -202,6 +204,8 @@ private:
       depth.header = job.header; depth.format = "png";
       cv::imencode(".jpg", job.rgb, rgb.data, {cv::IMWRITE_JPEG_QUALITY, jpeg_quality_});
       cv::imencode(".png", job.depth, depth.data, {cv::IMWRITE_PNG_COMPRESSION, png_level_});
+      auto perception_depth = cv_bridge::CvImage(job.header, "16UC1", job.depth).toImageMsg();
+      perception_depth_pub_->publish(*perception_depth);
       rgb_preview_pub_->publish(rgb); depth_preview_pub_->publish(depth); ++previews_;
     }
   }
@@ -254,7 +258,7 @@ private:
   image_transport::Subscriber rgb_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr depth_sub_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_, slam_rgb_pub_,
-    slam_depth_pub_;
+    slam_depth_pub_, perception_depth_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr rgb_info_pub_, depth_info_pub_,
     slam_rgb_info_pub_, slam_depth_info_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr rgb_preview_pub_,

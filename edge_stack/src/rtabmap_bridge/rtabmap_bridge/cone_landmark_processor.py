@@ -55,7 +55,7 @@ class ConeLandmarkProcessor(Node):
             self, CompressedImage, '/edge/camera/rgb/image_raw/compressed', qos_profile=pipeline_qos
         )
         self.depth_sub = message_filters.Subscriber(
-            self, Image, '/edge/camera/depth/image_raw', qos_profile=pipeline_qos
+            self, Image, '/edge/perception/depth/image_raw', qos_profile=pipeline_qos
         )
         self.yolo_sub = message_filters.Subscriber(
             self, Detection2DArray, '/yolo/detections', qos_profile=10
