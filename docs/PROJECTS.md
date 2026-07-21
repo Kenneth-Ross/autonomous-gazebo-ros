@@ -5,7 +5,7 @@ is not acceptance evidence.
 
 | Status | Project | Specification | Current progress | Next gate |
 |---|---|---|---|---|
-| `[W.I.P]` | 30 FPS simulation-to-edge RGB-D streaming | [Streaming contract](STREAMING_CONTRACT.md) | Split HEVC RGB/Zstd depth implementation, depth-8 exact-stamp receiver, newest-frame transport QoS, direct HEVC/Zstd wire publishers, header-preserving Zstd decode, callback rate and in-process latency diagnostics, MTU-safe DDS generation, strict nominal, soak, and edge adversarial probes, DDS validation, and preflight | Pass host builds/tests; then retain Orange Pi nominal, adversarial, latency, bandwidth, depth, and soak evidence |
+| `[W.I.P]` | 30 FPS simulation-to-edge RGB-D streaming | [Streaming contract](STREAMING_CONTRACT.md) | Split HEVC RGB/Zstd depth implementation, depth-8 exact-stamp receiver, newest-frame transport QoS, direct HEVC/Zstd wire publishers, header-preserving Zstd decode, callback rate and in-process latency diagnostics, MTU-safe DDS generation, strict nominal, soak, and edge adversarial probes, DDS validation, and preflight | Retain the 30-minute Orange Pi soak, bit-exact depth, full-stack, and remaining adversarial evidence |
 | `[W.I.P]` | Autonomous racing | [Plan](autonomous_racing_plan.md) | Existing controller, planner, validation, and telemetry sources | Complete behavioral and end-to-end acceptance |
 | `[PLAN]` | Autonomous navigation acceptance | [Plan](AUTONOMOUS_TESTING_PLAN.md) | Procedures drafted | Execute Phase 1 with retained evidence |
 | `[W.I.P]` | Foxglove visualization | [Specification](FOXGLOVE_INTEGRATION.md) | Isolated by edge launch flag; preview compression is a bounded worker | Automated launch/whitelist tests and Orange Pi fault evidence |
