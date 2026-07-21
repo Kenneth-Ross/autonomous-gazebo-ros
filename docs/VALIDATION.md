@@ -56,6 +56,22 @@ After it prints `READY`, run on simulation server:
 
 Server script resolves exactly one encoder PID, stops only that process, holds an eight-second outage, and starts replacement sender. Edge monitor requires baseline, observable zero-rate outage, recovery to at least 29 FPS, queue maximum 16, and no DDS/FFmpeg transport failure. Both sides retain evidence.
 
+## Missing-stream sequence
+
+After rebuilding and restarting server sender, run edge monitor:
+
+```bash
+./scripts/validation/camera_edge_missing_streams_monitor.sh /tmp/edge_receiver.log
+```
+
+After `READY`, simulation server runs:
+
+```bash
+./scripts/validation/camera_server_missing_streams.sh 10
+```
+
+Runtime gates disable RGB then depth independently. Edge must observe healthy opposite stream, zero pair output during each fault, bounded queue, no crash/transport error, and at least 29 FPS recovery after each restoration.
+
 ## Required adversarial evidence
 
 Independently restart sender, receiver, Foxglove, SLAM, and NPU; interrupt Ethernet

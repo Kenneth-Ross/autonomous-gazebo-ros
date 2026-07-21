@@ -15,6 +15,7 @@
 #include <gz/transport/Node.hh>
 #include <rclcpp/rclcpp.hpp>
 #include "sim_camera_encoder/depth_conversion.hpp"
+#include "sim_camera_encoder/stream_gate.hpp"
 #include "sim_camera_encoder/zstd_depth_encoder.hpp"
 
 using FFMPEGPacket = ffmpeg_image_transport_msgs::msg::FFMPEGPacket;
@@ -43,6 +44,21 @@ public:
     rgb_encoder_.setFrameRate(30, 1);
     depth_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
       "~/depth/zstd", rclcpp::QoS(rclcpp::KeepLast(2)).reliable());
+    stream_gate_.set_rgb(declare_parameter<bool>("publish_rgb", true));
+    stream_gate_.set_depth(declare_parameter<bool>("publish_depth", true));
+    parameter_callback_ = add_on_set_parameters_callback(
+      [this](const std::vector<rclcpp::Parameter> & parameters) {
+        rcl_interfaces::msg::SetParametersResult result;
+        result.successful = true;
+        for (const auto & parameter : parameters) {
+          if (parameter.get_name() == "publish_rgb") {
+            stream_gate_.set_rgb(parameter.as_bool());
+          } else if (parameter.get_name() == "publish_depth") {
+            stream_gate_.set_depth(parameter.as_bool());
+          }
+        }
+        return result;
+      });
     zstd_level_ = declare_parameter<int>("depth_zstd_level", 1);
     if (zstd_level_ < 1 || zstd_level_ > ZSTD_maxCLevel()) {
       throw std::invalid_argument("depth_zstd_level outside supported range");
@@ -76,7 +92,7 @@ private:
     packet.flags = flags;
     packet.is_bigendian = false;
     packet.data.assign(data, data + size);
-    rgb_pub_->publish(packet);
+    if (stream_gate_.rgb()) {rgb_pub_->publish(packet);}
   }
   using Queue = std::map<int64_t, gz::msgs::Image>;
   static int64_t stamp(const gz::msgs::Image & msg)
@@ -143,7 +159,9 @@ private:
     }
     rgb_encoder_.encodeImage(*rgb_image);
     auto depth_image = cv_bridge::CvImage(header, "16UC1", depth_mm).toImageMsg();
-    depth_pub_->publish(sim_camera_encoder::encode_zstd_image(*depth_image, zstd_level_));
+    if (stream_gate_.depth()) {
+      depth_pub_->publish(sim_camera_encoder::encode_zstd_image(*depth_image, zstd_level_));
+    }
     ++published_;
     rgb_.erase(rgb_.begin(), std::next(rgb_it));
     depth_.erase(depth_.begin(), std::next(depth_it));
@@ -164,6 +182,8 @@ private:
   Queue rgb_, depth_;
   std::mutex mutex_;
   rclcpp::TimerBase::SharedPtr timer_;
+  sim_camera_encoder::StreamGate stream_gate_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr parameter_callback_;
   int zstd_level_{1};
   uint64_t rgb_received_{0}, depth_received_{0}, published_{0};
   uint64_t rgb_dropped_{0}, depth_dropped_{0}, malformed_{0};
