@@ -80,3 +80,14 @@ Sender-restart fault test monitor:
 ```
 
 Wait for `READY`, then run simulation-server script documented in `docs/VALIDATION.md`.
+
+Full NPU launch requires explicit Orange Pi model path:
+
+```bash
+ros2 launch rtabmap_bridge rtabmap_slam.launch.py \
+  enable_slam:=true enable_npu:=true enable_landmarks:=true \
+  enable_foxglove:=true enable_preview_compression:=true \
+  npu_model_path:=/absolute/path/to/model.rknn
+```
+
+Launch rejects missing or nonexistent model paths.

@@ -17,6 +17,13 @@ def validate_flags(enable_slam, enable_npu, enable_landmarks):
         raise ValueError('enable_landmarks requires enable_slam')
 
 
+def validate_npu_model(enable_npu, model_path, exists=os.path.isfile):
+    if enable_npu and not model_path:
+        raise ValueError('enable_npu requires npu_model_path')
+    if enable_npu and not exists(model_path):
+        raise ValueError(f'NPU model does not exist: {model_path}')
+
+
 def validate_network(interface, local_address, peer_address, inventory=None):
     ipaddress.ip_address(peer_address)
     if not interface:

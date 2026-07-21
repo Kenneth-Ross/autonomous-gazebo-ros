@@ -5,7 +5,7 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetEnvironment
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 from rtabmap_bridge.launch_contract import (
-    cyclone_uri, parse_bool, validate_flags, validate_network)
+    cyclone_uri, parse_bool, validate_flags, validate_network, validate_npu_model)
 
 
 def launch_setup(context):
@@ -14,6 +14,7 @@ def launch_setup(context):
         'enable_foxglove', 'enable_slam', 'enable_npu', 'enable_landmarks',
         'enable_preview_compression')}
     validate_flags(enabled['enable_slam'], enabled['enable_npu'], enabled['enable_landmarks'])
+    validate_npu_model(enabled['enable_npu'], cfg['npu_model_path'])
     interface, local, peer = cfg['network_interface'], cfg['local_address'], cfg['peer_address']
     validate_network(interface, local, peer)
     use_sim_time = parse_bool(cfg['use_sim_time'])
@@ -59,7 +60,8 @@ def launch_setup(context):
                 '^/edge/camera/.*/compressed$', '^/yolo/.*']}], output='screen'))
     if enabled['enable_npu']:
         actions.append(Node(package='rtabmap_bridge', executable='cone_detector_npu',
-            parameters=[{'use_sim_time': use_sim_time}], output='screen'))
+            parameters=[{'use_sim_time': use_sim_time,
+                         'model_path': cfg['npu_model_path']}], output='screen'))
     if enabled['enable_landmarks']:
         actions.append(Node(package='rtabmap_bridge', executable='cone_landmark_processor',
             parameters=[{'use_sim_time': use_sim_time}], output='screen'))
@@ -80,7 +82,8 @@ def generate_launch_description():
         DeclareLaunchArgument('local_address', default_value=''),
         DeclareLaunchArgument('peer_address', default_value='10.10.12.10'),
         DeclareLaunchArgument('preview_rate_hz', default_value='5.0'),
-        DeclareLaunchArgument('rgb_decoder_av_options', default_value='')]
+        DeclareLaunchArgument('rgb_decoder_av_options', default_value=''),
+        DeclareLaunchArgument('npu_model_path', default_value='')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (
         'enable_foxglove', 'enable_slam', 'enable_npu', 'enable_landmarks',
         'enable_preview_compression')]

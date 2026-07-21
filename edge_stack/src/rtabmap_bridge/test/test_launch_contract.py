@@ -1,6 +1,7 @@
 import pytest
 from pathlib import Path
-from rtabmap_bridge.launch_contract import cyclone_uri, validate_flags, validate_network
+from rtabmap_bridge.launch_contract import (
+    cyclone_uri, validate_flags, validate_network, validate_npu_model)
 
 
 def test_invalid_flag_dependencies_are_rejected():
@@ -25,3 +26,12 @@ def test_launch_exposes_optional_rgb_decoder_options():
     launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
     assert "DeclareLaunchArgument('rgb_decoder_av_options', default_value='')" in launch
     assert "'oakd.rgb.image_raw.ffmpeg.decoder_av_options'" in launch
+
+
+def test_npu_requires_explicit_existing_model():
+    with pytest.raises(ValueError):
+        validate_npu_model(True, '')
+    with pytest.raises(ValueError):
+        validate_npu_model(True, '/missing/model.rknn', exists=lambda _: False)
+    validate_npu_model(True, '/models/cones.rknn', exists=lambda _: True)
+    validate_npu_model(False, '')
