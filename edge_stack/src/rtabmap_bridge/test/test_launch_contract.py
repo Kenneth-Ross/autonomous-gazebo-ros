@@ -35,3 +35,10 @@ def test_npu_requires_explicit_existing_model():
         validate_npu_model(True, '/missing/model.rknn', exists=lambda _: False)
     validate_npu_model(True, '/models/cones.rknn', exists=lambda _: True)
     validate_npu_model(False, '')
+
+def test_slam_uses_sensor_data_qos_for_raw_images():
+    launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
+    assert "'qos_image': 2" in launch
+    assert "'qos_camera_info': 1" in launch
+    assert "'sync_queue_size': 2" in launch
+    assert "'queue_size': 2" not in launch

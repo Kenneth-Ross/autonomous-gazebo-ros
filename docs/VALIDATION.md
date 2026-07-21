@@ -134,3 +134,4 @@ Capture process RSS and thread counts during the soak. Latency evidence must sta
 clock synchronization and percentile method. If `send_packet failed` remains in
 camera-only testing, record the exact error first; only `EAGAIN` justifies a
 drain-and-retry wrapper patch.
+- 2026-07-21 full-stack Orange Pi attempt loaded the RKNN model and initialized RK3588 NPU, Foxglove, RGB-D odometry, and RTAB-Map. It failed SLAM input because RTAB-Map requested reliable raw images while the camera contract publishes best-effort KeepLast(1). Launch now sets RTAB-Map `qos_image=2` (best-effort), retains reliable CameraInfo, and uses `sync_queue_size`; Orange Pi rerun pending.
