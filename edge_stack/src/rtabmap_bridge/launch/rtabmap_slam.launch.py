@@ -80,7 +80,7 @@ def generate_launch_description():
         DeclareLaunchArgument('local_address', default_value=''),
         DeclareLaunchArgument('peer_address', default_value='10.10.12.10'),
         DeclareLaunchArgument('preview_rate_hz', default_value='5.0'),
-        DeclareLaunchArgument('rgb_decoder_av_options', default_value='flags:low_delay')]
+        DeclareLaunchArgument('rgb_decoder_av_options', default_value='')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (
         'enable_foxglove', 'enable_slam', 'enable_npu', 'enable_landmarks',
         'enable_preview_compression')]

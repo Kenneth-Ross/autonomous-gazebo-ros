@@ -21,7 +21,7 @@ def test_dds_interface_address_and_peer_contract():
     assert '<MaxMessageSize>12MB</MaxMessageSize>' not in xml
 
 
-def test_launch_requests_low_delay_rgb_decode():
+def test_launch_exposes_optional_rgb_decoder_options():
     launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
-    assert "DeclareLaunchArgument('rgb_decoder_av_options', default_value='flags:low_delay')" in launch
+    assert "DeclareLaunchArgument('rgb_decoder_av_options', default_value='')" in launch
     assert "'oakd.rgb.image_raw.ffmpeg.decoder_av_options'" in launch

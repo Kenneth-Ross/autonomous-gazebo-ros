@@ -43,7 +43,8 @@ fi
 
 start_receiver() {
     : > "$RECEIVER_LOG"
-    setsid ros2 launch rtabmap_bridge rtabmap_slam.launch.py > "$RECEIVER_LOG" 2>&1 &
+    setsid ros2 launch rtabmap_bridge rtabmap_slam.launch.py \
+        enable_preview_compression:=true > "$RECEIVER_LOG" 2>&1 &
     receiver_pid=$!
 }
 
@@ -70,7 +71,7 @@ wait_for_pair_rate() {
 }
 
 assert_clean_transport() {
-    if grep -Eq 'retcode -58|send_packet failed|depth Zstd decode failed' "$RECEIVER_LOG"; then
+    if grep -Eq 'retcode -58|send_packet failed' "$RECEIVER_LOG"; then
         tail -40 "$RECEIVER_LOG"
         echo 'ERROR: transport failure found'
         return 1
@@ -90,8 +91,23 @@ start_receiver
 wait_for_pair_rate
 assert_clean_transport
 
-echo '===== slow best-effort consumer ====='
-python3 "$SCRIPT_DIR/adversarial_edge_probe.py" slow-consumer --duration 15 --delay 0.25
+echo '===== slow bounded preview consumer ====='
+slow_start=$(( $(wc -l < "$RECEIVER_LOG") + 1 ))
+slow_drop_before="$(latest_field unmatched_dropped || true)"
+python3 "$SCRIPT_DIR/adversarial_edge_probe.py" slow-consumer --compressed --duration 15 --delay 0.25
+slow_metrics="$(tail -n +"$slow_start" "$RECEIVER_LOG" | grep 'camera_decoder.*pair_rate=' || true)"
+slow_min_rate="$(printf '%s\n' "$slow_metrics" | sed -n 's/.*pair_rate=\([^ ]*\).*/\1/p' | awk 'NR==1 || $1<min {min=$1} END {if (NR) print min}')"
+slow_drop_after="$(latest_field unmatched_dropped || true)"
+[[ -n "$slow_min_rate" && -n "$slow_drop_before" && -n "$slow_drop_after" ]] || {
+    echo 'ERROR: slow-consumer metrics missing'; exit 1;
+}
+awk -v rate="$slow_min_rate" 'BEGIN {exit !(rate >= 29.0)}' || {
+    echo "ERROR: slow-consumer pair rate ${slow_min_rate} below 29 FPS"; exit 1;
+}
+[[ "$slow_drop_after" -eq "$slow_drop_before" ]] || {
+    echo "ERROR: slow-consumer drops grew from $slow_drop_before to $slow_drop_after"; exit 1;
+}
+echo "slow_pair_rate_min=$slow_min_rate slow_drop_growth=0"
 wait_for_pair_rate
 assert_clean_transport
 

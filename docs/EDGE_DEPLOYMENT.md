@@ -31,7 +31,7 @@ and the configured default peer is used without embedding addresses in the comma
 ros2 launch rtabmap_bridge rtabmap_slam.launch.py
 ```
 
-Foxglove, SLAM, NPU, landmarks, and preview compression are opt-in. The RGB decoder defaults to `rgb_decoder_av_options:=flags:low_delay`; override only for controlled decoder comparison. Explicit
+Foxglove, SLAM, NPU, landmarks, and preview compression are opt-in. Optional `rgb_decoder_av_options` defaults empty; `hevc_rkmpp` rejected `flags:low_delay` during hardware validation. Explicit
 network overrides remain available when auto-detection is ambiguous.
 
 The launch fails if the requested interface/address does not exist, or landmarks

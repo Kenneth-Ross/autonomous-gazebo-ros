@@ -9,11 +9,12 @@ from sensor_msgs.msg import CompressedImage, Image
 
 
 class SlowConsumer(Node):
-    def __init__(self, topic, delay):
+    def __init__(self, topic, delay, compressed):
         super().__init__('adversarial_slow_consumer')
         self.delay = delay
         self.received = 0
-        self.create_subscription(Image, topic, self.callback, qos_profile_sensor_data)
+        message_type = CompressedImage if compressed else Image
+        self.create_subscription(message_type, topic, self.callback, qos_profile_sensor_data)
 
     def callback(self, _message):
         self.received += 1
@@ -35,7 +36,7 @@ class CorruptDepthPublisher(Node):
 
 
 def run_slow(args):
-    node = SlowConsumer(args.topic, args.delay)
+    node = SlowConsumer(args.topic, args.delay, args.compressed)
     deadline = time.monotonic() + args.duration
     while rclpy.ok() and time.monotonic() < deadline:
         rclpy.spin_once(node, timeout_sec=0.1)
@@ -63,7 +64,8 @@ def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='mode', required=True)
     slow = subparsers.add_parser('slow-consumer')
-    slow.add_argument('--topic', default='/edge/camera/rgb/image_raw')
+    slow.add_argument('--topic', default='/edge/camera/rgb/image_raw/compressed')
+    slow.add_argument('--compressed', action='store_true')
     slow.add_argument('--duration', type=int, default=15)
     slow.add_argument('--delay', type=float, default=0.25)
     corrupt = subparsers.add_parser('corrupt-depth')
