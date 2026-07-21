@@ -47,3 +47,14 @@ cd /path/to/ros2_gazebo/server_sim
 source install/setup.bash
 ros2 launch gazebo_oakd_stream_sender stream_to_remote.launch.py
 ```
+
+## Orange Pi retained soak evidence
+
+With the camera-only receiver running through `tee /tmp/edge_receiver.log`, run:
+
+```bash
+cd /path/to/ros2_gazebo
+./scripts/validation/camera_edge_soak.sh 1800 /tmp/edge_receiver.log
+```
+
+This uses ROS simulated time for capture-to-edge latency and records rate, queue, error, RSS, thread, and CPU evidence. It does not require network sysctl or interface queue changes.
