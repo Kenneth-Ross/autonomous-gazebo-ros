@@ -23,6 +23,7 @@ def launch_setup(context):
         parameters=[{'use_sim_time': use_sim_time,
                      'publish_compressed': enabled['enable_preview_compression'],
                      'preview_rate_hz': float(cfg['preview_rate_hz']),
+                     'slam_rate_hz': float(cfg['slam_rate_hz']),
                      'pairing_queue_depth': 8,
                      'oakd.rgb.image_raw.ffmpeg.decoder_av_options':
                          cfg['rgb_decoder_av_options']}],
@@ -31,10 +32,10 @@ def launch_setup(context):
         common = {'use_sim_time': use_sim_time, 'frame_id': 'base_link',
                   'qos_image': 2, 'qos_camera_info': 1, 'approx_sync': False,
                   'sync_queue_size': 2}
-        remaps = [('rgb/image', '/edge/camera/rgb/image_raw'),
-                  ('depth/image', '/edge/camera/depth/image_raw'),
-                  ('rgb/camera_info', '/edge/camera/rgb/camera_info'),
-                  ('depth/camera_info', '/edge/camera/depth/camera_info')]
+        remaps = [('rgb/image', '/edge/slam/rgb/image_raw'),
+                  ('depth/image', '/edge/slam/depth/image_raw'),
+                  ('rgb/camera_info', '/edge/slam/rgb/camera_info'),
+                  ('depth/camera_info', '/edge/slam/depth/camera_info')]
         components.extend([
             ComposableNode(package='rtabmap_odom', plugin='rtabmap_odom::RGBDOdometry',
                            name='rgbd_odometry', parameters=[dict(common, qos=2)], remappings=remaps,
@@ -82,6 +83,7 @@ def generate_launch_description():
         DeclareLaunchArgument('local_address', default_value=''),
         DeclareLaunchArgument('peer_address', default_value='10.10.12.10'),
         DeclareLaunchArgument('preview_rate_hz', default_value='5.0'),
+        DeclareLaunchArgument('slam_rate_hz', default_value='10.0'),
         DeclareLaunchArgument('rgb_decoder_av_options', default_value=''),
         DeclareLaunchArgument('npu_model_path', default_value='')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (

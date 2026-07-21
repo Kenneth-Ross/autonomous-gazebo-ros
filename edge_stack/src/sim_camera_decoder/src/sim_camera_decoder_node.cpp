@@ -26,10 +26,13 @@ public:
     frame_id_ = declare_parameter<std::string>("frame_id", "camera_link_optical");
     preview_ = declare_parameter<bool>("publish_compressed", true);
     preview_rate_ = declare_parameter<double>("preview_rate_hz", 5.0);
+    slam_rate_ = declare_parameter<double>("slam_rate_hz", 10.0);
     jpeg_quality_ = declare_parameter<int>("jpeg_quality", 50);
     png_level_ = declare_parameter<int>("png_compression", 3);
     pairing_queue_depth_ = declare_parameter<int>("pairing_queue_depth", 8);
-    if (width_ <= 0 || height_ <= 0 || preview_rate_ < 0.0 || pairing_queue_depth_ <= 0) {
+    if (width_ <= 0 || height_ <= 0 || preview_rate_ < 0.0 || slam_rate_ <= 0.0 ||
+      pairing_queue_depth_ <= 0)
+    {
       throw std::invalid_argument("dimensions must be positive and preview rate non-negative");
     }
     pairer_.set_capacity(static_cast<std::size_t>(pairing_queue_depth_));
@@ -40,6 +43,14 @@ public:
       sensor_qos);
     rgb_info_pub_ = create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/rgb/camera_info",
       info_qos);
+    slam_rgb_pub_ = create_publisher<sensor_msgs::msg::Image>("/edge/slam/rgb/image_raw",
+      sensor_qos);
+    slam_depth_pub_ = create_publisher<sensor_msgs::msg::Image>("/edge/slam/depth/image_raw",
+      sensor_qos);
+    slam_rgb_info_pub_ =
+      create_publisher<sensor_msgs::msg::CameraInfo>("/edge/slam/rgb/camera_info", info_qos);
+    slam_depth_info_pub_ =
+      create_publisher<sensor_msgs::msg::CameraInfo>("/edge/slam/depth/camera_info", info_qos);
     depth_info_pub_ =
       create_publisher<sensor_msgs::msg::CameraInfo>("/edge/camera/depth/camera_info", info_qos);
     rgb_preview_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
@@ -139,6 +150,23 @@ private:
     rgb_pub_->publish(std::move(rgb_out)); depth_pub_->publish(std::move(depth_out));
     info_.header = header;
     rgb_info_pub_->publish(info_); depth_info_pub_->publish(info_);
+    const auto slam_period_ns = static_cast<int64_t>(1e9 / slam_rate_);
+    const auto header_stamp_ns = rclcpp::Time(header.stamp).nanoseconds();
+    if (next_slam_stamp_ == 0 || header_stamp_ns >= next_slam_stamp_ ||
+      header_stamp_ns < next_slam_stamp_ - slam_period_ns)
+    {
+      auto slam_rgb = std::make_unique<sensor_msgs::msg::Image>(*rgb);
+      auto slam_depth = std::make_unique<sensor_msgs::msg::Image>(*depth);
+      slam_rgb->header = header; slam_depth->header = header;
+      slam_rgb_pub_->publish(std::move(slam_rgb));
+      slam_depth_pub_->publish(std::move(slam_depth));
+      slam_rgb_info_pub_->publish(info_); slam_depth_info_pub_->publish(info_);
+      if (next_slam_stamp_ == 0 || header_stamp_ns < next_slam_stamp_ - slam_period_ns) {
+        next_slam_stamp_ = header_stamp_ns + slam_period_ns;
+      } else {
+        do {next_slam_stamp_ += slam_period_ns;} while (next_slam_stamp_ <= header_stamp_ns);
+      }
+    }
     const auto stamp_ns = rclcpp::Time(header.stamp).nanoseconds();
     const auto now_ns = get_clock()->now().nanoseconds();
     {
@@ -225,8 +253,10 @@ private:
   }
   image_transport::Subscriber rgb_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr depth_sub_;
-  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr rgb_info_pub_, depth_info_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_, depth_pub_, slam_rgb_pub_,
+    slam_depth_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr rgb_info_pub_, depth_info_pub_,
+    slam_rgb_info_pub_, slam_depth_info_pub_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr rgb_preview_pub_,
     depth_preview_pub_;
   sensor_msgs::msg::CameraInfo info_;
@@ -235,8 +265,9 @@ private:
   std::mutex mutex_; std::condition_variable pair_cv_, preview_cv_;
   std::optional<PreviewJob> preview_job_; std::thread pair_thread_, preview_thread_;
   rclcpp::TimerBase::SharedPtr timer_; bool stop_{false}, preview_; int width_, height_;
-  int jpeg_quality_, png_level_, pairing_queue_depth_; double preview_rate_; std::string frame_id_;
-  int64_t last_preview_stamp_{0};
+  int jpeg_quality_, png_level_, pairing_queue_depth_; double preview_rate_, slam_rate_;
+  std::string frame_id_;
+  int64_t last_preview_stamp_{0}, next_slam_stamp_{0};
   uint64_t rgb_received_{0}, depth_received_{0}, published_{0}, malformed_{0}, previews_{0};
   uint64_t last_rgb_received_{0}, last_depth_received_{0}, last_published_{0};
 };
