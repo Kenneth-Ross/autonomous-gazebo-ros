@@ -7,6 +7,12 @@
             <FragmentSize>1344B</FragmentSize>
             <AllowMulticast>spdp</AllowMulticast>
         </General>
+        <Channels>
+            <Channel Name="camera" TransportPriority="0">
+                <DataBandwidthLimit>180 Mbps</DataBandwidthLimit>
+                <AuxiliaryBandwidthLimit>20 Mbps</AuxiliaryBandwidthLimit>
+            </Channel>
+        </Channels>
         <Internal>
             <SocketReceiveBufferSize min="10MB"/>
             <SocketSendBufferSize min="10MB"/>

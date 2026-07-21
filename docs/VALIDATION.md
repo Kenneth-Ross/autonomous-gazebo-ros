@@ -1,7 +1,8 @@
 # Validation and Evidence
 
 ## Current result — 2026-07-20 America/Los_Angeles
-n- 2026-07-20 hardware trial: Orange Pi opened `hevc_rkmpp` and received RGB at approximately 30 FPS, but published no pairs because `zstd_image_transport` was absent on the simulation server. The bounded queue behaved as designed. Preflight logger formatting and a stale server DDS peer were identified and corrected; rerun pending.
+- 2026-07-20 hardware trial: Orange Pi opened `hevc_rkmpp` and received RGB at approximately 30 FPS, but published no pairs because `zstd_image_transport` was absent on the simulation server. The bounded queue behaved as designed. Preflight logger formatting and a stale server DDS peer were identified and corrected; rerun pending.
+- The physical link remains historically validated near 941 Mbps; current `-58` failures are treated as DDS fragmented-sample burst failures, not insufficient link bandwidth. Sender-side CycloneDDS pacing is under test.
 
 Implementation is `[W.I.P]`. On the host, `sim_camera_encoder` built and its 6 tests passed; `sim_camera_decoder` built and its 5 tests passed; `rtabmap_bridge` built in the documented system-Python environment and its 2 launch-contract tests passed. The installed launch exposed all isolation, preview, peer, interface, and local-address arguments. No Orange Pi or end-to-end result is claimed.
 
