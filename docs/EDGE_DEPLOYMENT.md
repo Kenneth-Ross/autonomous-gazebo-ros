@@ -39,7 +39,7 @@ are enabled without both NPU and SLAM. Do not keep a second active CycloneDDS fi
 the generated launch XML is canonical for this pipeline.
 
 Server sender:
-The server and Orange Pi must both resolve `ros2 pkg prefix zstd_image_transport` before launch.
+The server and Orange Pi must provide `pkg-config --modversion libzstd`. The Jazzy `zstd_image_transport` plugin is inventory-only and is not used by the depth data path because version 4.0.7 drops headers and uses zlib/DEFLATE rather than Zstandard.
 
 ```bash
 source /opt/ros/jazzy/setup.bash

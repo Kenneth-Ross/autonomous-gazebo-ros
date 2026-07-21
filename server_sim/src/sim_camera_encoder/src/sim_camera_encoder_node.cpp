@@ -12,6 +12,7 @@
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include "sim_camera_encoder/depth_conversion.hpp"
+#include "sim_camera_encoder/zstd_depth_encoder.hpp"
 
 class SimCameraEncoder : public rclcpp::Node
 {
@@ -24,7 +25,12 @@ public:
     qos.depth = 2;
     qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
     rgb_pub_ = image_transport::create_publisher(this, "~/rgb", qos);
-    depth_pub_ = image_transport::create_publisher(this, "~/depth", qos);
+    depth_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
+      "~/depth/zstd", rclcpp::QoS(rclcpp::KeepLast(2)).reliable());
+    zstd_level_ = declare_parameter<int>("depth_zstd_level", 1);
+    if (zstd_level_ < 1 || zstd_level_ > ZSTD_maxCLevel()) {
+      throw std::invalid_argument("depth_zstd_level outside supported range");
+    }
     gz_node_ = std::make_unique<gz::transport::Node>();
     const bool rgb_ok = gz_node_->Subscribe(
       "/oakd/rgbd_camera/image", &SimCameraEncoder::on_rgb, this);
@@ -86,7 +92,8 @@ private:
       output[i] = sim_camera_encoder::metres_to_millimetres(input[i]);
     }
     rgb_pub_.publish(cv_bridge::CvImage(header, "bgr8", bgr).toImageMsg());
-    depth_pub_.publish(cv_bridge::CvImage(header, "16UC1", depth_mm).toImageMsg());
+    auto depth_image = cv_bridge::CvImage(header, "16UC1", depth_mm).toImageMsg();
+    depth_pub_->publish(sim_camera_encoder::encode_zstd_image(*depth_image, zstd_level_));
     ++published_;
     rgb_.erase(rgb_.begin(), std::next(rgb_it));
     depth_.erase(depth_.begin(), std::next(depth_it));
@@ -100,11 +107,13 @@ private:
       rgb_received_, depth_received_, published_, rgb_dropped_, depth_dropped_, malformed_,
       rgb_.size(), depth_.size());
   }
-  image_transport::Publisher rgb_pub_, depth_pub_;
+  image_transport::Publisher rgb_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr depth_pub_;
   std::unique_ptr<gz::transport::Node> gz_node_;
   Queue rgb_, depth_;
   std::mutex mutex_;
   rclcpp::TimerBase::SharedPtr timer_;
+  int zstd_level_{1};
   uint64_t rgb_received_{0}, depth_received_{0}, published_{0};
   uint64_t rgb_dropped_{0}, depth_dropped_{0}, malformed_{0};
 };

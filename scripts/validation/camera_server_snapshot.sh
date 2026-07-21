@@ -22,10 +22,12 @@ echo "utc=$RUN_ID commit=$(git -C "$REPO_ROOT" rev-parse HEAD)"
 
 echo
 echo "===== multimedia packages ====="
-for package in ffmpeg_image_transport ffmpeg_encoder_decoder zstd_image_transport
+for package in ffmpeg_image_transport ffmpeg_encoder_decoder
 do
     ros2 pkg prefix "$package"
 done
+pkg-config --modversion libzstd
+ros2 pkg prefix zstd_image_transport || echo "zstd_image_transport not installed (inventory only)"
 
 echo
 echo "===== installed CycloneDDS contract ====="

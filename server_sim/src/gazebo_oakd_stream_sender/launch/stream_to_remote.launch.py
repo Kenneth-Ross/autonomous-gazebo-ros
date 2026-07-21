@@ -1,6 +1,6 @@
 import os
 
-from ament_index_python.packages import get_package_prefix, get_package_share_directory
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
@@ -8,7 +8,6 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    get_package_prefix('zstd_image_transport')  # Fail clearly when the depth plugin is absent.
     config = os.path.join(
         get_package_share_directory('gazebo_oakd_stream_sender'),
         'config', 'cyclonedds.xml')
@@ -24,7 +23,6 @@ def generate_launch_description():
             remappings=[
                 ('~/rgb', '/oakd/rgb/image_raw'),
                 ('~/rgb/ffmpeg', '/oakd/rgb/image_raw/ffmpeg'),
-                ('~/depth', '/oakd/depth/image_raw'),
                 ('~/depth/zstd', '/oakd/depth/image_raw/zstd'),
             ],
             parameters=[{
@@ -35,6 +33,6 @@ def generate_launch_description():
                 'sim_camera_encoder.rgb.ffmpeg.bit_rate': 20000000,
                 'sim_camera_encoder.rgb.ffmpeg.gop_size': 10,
                 'sim_camera_encoder.rgb.ffmpeg.max_b_frames': 0,
-                'sim_camera_encoder.depth.zstd.compression_level': 1,
+                'depth_zstd_level': 1,
             }],
             output='screen')])
