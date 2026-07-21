@@ -31,16 +31,27 @@ delay/reorder pairs; apply CPU/memory pressure; and compare hardware `hevc_rkmpp
 with software `hevc` on identical recorded packets. Retain commands, revision,
 timestamps, expected/observed behavior, metrics, logs, artifacts, and verdict.
 
-## Measurement commands
+## Sequenced probe scripts
+
+Manual multi-command probes must be encoded in scripts so ordering, timeouts, environment, and evidence capture remain repeatable. Do not copy individual `ros2 topic` commands from a test case unless diagnosing a script failure.
+
+Orange Pi camera-only nominal probe:
 
 ```bash
-ros2 topic hz /edge/camera/rgb/image_raw
-ros2 topic hz /edge/camera/depth/image_raw
-ros2 topic info -v /oakd/rgb/image_raw/ffmpeg
-ros2 topic info -v /oakd/depth/image_raw/zstd
-ros2 topic bw /oakd/rgb/image_raw/ffmpeg
-ros2 topic bw /oakd/depth/image_raw/zstd
+cd /path/to/ros2_gazebo
+./scripts/validation/camera_edge_nominal.sh 30
 ```
+
+The script runs preflight, required/legacy topic checks, QoS inspection, message contract samples, RGB and depth rate probes, sequential wire-bandwidth probes, and a resource snapshot. It writes one UTC-stamped log under `validation_evidence/`. Bandwidth probes are deliberately sequential because each adds a DDS reader.
+
+Simulation-server snapshot:
+
+```bash
+cd /home/k-dev/dev/ros2_gazebo
+./scripts/validation/camera_server_snapshot.sh
+```
+
+The snapshot records revision, multimedia package prefixes, installed CycloneDDS XML, network state, camera topics, and encoder process resources. Start receiver and sender before running either script.
 
 Capture process RSS and thread counts during the soak. Latency evidence must state
 clock synchronization and percentile method. If `send_packet failed` remains in

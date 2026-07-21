@@ -38,3 +38,6 @@ video1/
 
 # Submodules / Nested repos
 foxglove_worktree/
+
+# Generated validation evidence
+validation_evidence/
