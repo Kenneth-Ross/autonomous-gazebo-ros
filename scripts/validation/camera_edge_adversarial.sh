@@ -16,6 +16,13 @@ cleanup() {
 stop_receiver() {
     if [[ -n "$receiver_pid" ]]; then
         kill -INT -- "-$receiver_pid" 2>/dev/null || true
+        local deadline=$((SECONDS + 10))
+        while kill -0 "$receiver_pid" 2>/dev/null && (( SECONDS < deadline )); do
+            sleep 1
+        done
+        if kill -0 "$receiver_pid" 2>/dev/null; then
+            kill -TERM -- "-$receiver_pid" 2>/dev/null || true
+        fi
         wait "$receiver_pid" 2>/dev/null || true
         receiver_pid=''
     fi
@@ -43,14 +50,14 @@ start_receiver() {
 latest_field() {
     local field="$1"
     grep 'camera_decoder.*pair_rate=' "$RECEIVER_LOG" | tail -1 | \
-        sed -n "s/.*${field}=\\([^ ]*\\).*/\\1/p"
+        sed -n "s/.*${field}=\\([^ ]*\\).*/\\1/p" || true
 }
 
 wait_for_pair_rate() {
     local deadline=$((SECONDS + 40)) rate
     while (( SECONDS < deadline )); do
         kill -0 "$receiver_pid" 2>/dev/null || { tail -40 "$RECEIVER_LOG"; echo 'ERROR: receiver exited'; return 1; }
-        rate="$(latest_field pair_rate)"
+        rate="$(latest_field pair_rate || true)"
         if [[ -n "$rate" ]] && awk -v rate="$rate" 'BEGIN {exit !(rate >= 29.0)}'; then
             echo "pair_rate=$rate"
             return 0
@@ -89,10 +96,10 @@ wait_for_pair_rate
 assert_clean_transport
 
 echo '===== malformed Zstd frame ====='
-before="$(latest_field malformed)"
+before="$(latest_field malformed || true)"
 python3 "$SCRIPT_DIR/adversarial_edge_probe.py" corrupt-depth --count 3
 sleep 6
-after="$(latest_field malformed)"
+after="$(latest_field malformed || true)"
 [[ -n "$before" && -n "$after" && "$after" -gt "$before" ]] || {
     tail -40 "$RECEIVER_LOG"
     echo "ERROR: malformed counter did not grow before=${before:-missing} after=${after:-missing}"
