@@ -26,6 +26,7 @@ outputs use sensor-data best-effort KeepLast(1); CameraInfo uses reliable KeepLa
 JPEG/PNG preview compression uses a separate one-slot worker at
 `preview_rate_hz:=5.0` by default. It is observability output and cannot apply
 backpressure to raw camera publication.
+Camera-only operation is the launch default; preview, Foxglove, SLAM, NPU, and landmarks are opt-in.
 
 NVENC launch policy requests `hevc_nvenc`, preset `p1`, ultra-low-latency tuning,
 GOP 10, zero B-frames, and 20 Mbps. Confirm actual supported options and negotiated

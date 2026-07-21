@@ -24,14 +24,15 @@ ros2 launch rtabmap_bridge rtabmap_slam.launch.py \
   network_interface:=eth0 local_address:=10.10.12.11 peer_address:=10.10.12.10
 ```
 
-Camera-only isolation:
+Camera-only isolation is the default. CycloneDDS auto-detects the local interface,
+and the configured default peer is used without embedding addresses in the command:
 
 ```bash
-ros2 launch rtabmap_bridge rtabmap_slam.launch.py \
-  enable_foxglove:=false enable_slam:=false enable_npu:=false \
-  enable_landmarks:=false enable_preview_compression:=false \
-  network_interface:=eth0 local_address:=10.10.12.11 peer_address:=10.10.12.10
+ros2 launch rtabmap_bridge rtabmap_slam.launch.py
 ```
+
+Foxglove, SLAM, NPU, landmarks, and preview compression are opt-in. Explicit
+network overrides remain available when auto-detection is ambiguous.
 
 The launch fails if the requested interface/address does not exist, or landmarks
 are enabled without both NPU and SLAM. Do not keep a second active CycloneDDS file;
