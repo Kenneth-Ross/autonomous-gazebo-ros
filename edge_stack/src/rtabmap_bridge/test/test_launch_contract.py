@@ -53,5 +53,7 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "'/yolo/annotated/compressed'" not in landmark
     assert "ImageAnnotations, '/yolo/image_annotations'" in landmark
     assert "bbox_annotation.type = PointsAnnotation.LINE_LOOP" in landmark
+    assert "annotations_msg.timestamp = depth_msg.header.stamp" in landmark
+    assert "queue_size=8, slop=0.0" in landmark
     assert 'text_annotation.text = f"{display_id}: {z_m:.1f}m"' in landmark
     assert "self.annotation_pub.publish(annotations_msg)" in landmark

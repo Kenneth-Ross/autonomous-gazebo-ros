@@ -60,7 +60,7 @@ class ConeLandmarkProcessor(Node):
         
         # Exact timestamp synchronizer with bounded queues
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.depth_sub, self.yolo_sub], queue_size=2, slop=0.0
+            [self.depth_sub, self.yolo_sub], queue_size=8, slop=0.0
         )
         self.ts.registerCallback(self.callback)
         
@@ -123,6 +123,7 @@ class ConeLandmarkProcessor(Node):
         landmarks_msg = LandmarkDetections()
         landmarks_msg.header = depth_msg.header
         annotations_msg = ImageAnnotations()
+        annotations_msg.timestamp = depth_msg.header.stamp
         stamp = depth_msg.header.stamp
         
         try:
@@ -141,6 +142,20 @@ class ConeLandmarkProcessor(Node):
             size_x = det.bbox.size_x
             size_y = det.bbox.size_y
             
+            bbox_annotation = PointsAnnotation()
+            bbox_annotation.timestamp = depth_msg.header.stamp
+            bbox_annotation.type = PointsAnnotation.LINE_LOOP
+            bbox_annotation.thickness = 3.0
+            bbox_annotation.outline_color.g = 1.0
+            bbox_annotation.outline_color.a = 1.0
+            left = float(u_center - size_x / 2.0)
+            top = float(v_center - size_y / 2.0)
+            right = float(u_center + size_x / 2.0)
+            bottom = float(v_center + size_y / 2.0)
+            bbox_annotation.points = [Point2(x=left, y=top), Point2(x=right, y=top),
+                                      Point2(x=right, y=bottom), Point2(x=left, y=bottom)]
+            annotations_msg.points.append(bbox_annotation)
+
             # Use inner 50% of bbox to avoid edge artifacts
             roi_w = max(5, int(size_x * 0.5))
             roi_h = max(5, int(size_y * 0.5))
@@ -265,19 +280,6 @@ class ConeLandmarkProcessor(Node):
             else:
                 landmark_id = -1
             
-            bbox_annotation = PointsAnnotation()
-            bbox_annotation.timestamp = depth_msg.header.stamp
-            bbox_annotation.type = PointsAnnotation.LINE_LOOP
-            bbox_annotation.thickness = 3.0
-            bbox_annotation.outline_color.g = 1.0
-            bbox_annotation.outline_color.a = 1.0
-            left = float(u_center - size_x / 2.0)
-            top = float(v_center - size_y / 2.0)
-            right = float(u_center + size_x / 2.0)
-            bottom = float(v_center + size_y / 2.0)
-            bbox_annotation.points = [Point2(x=left, y=top), Point2(x=right, y=top),
-                                      Point2(x=right, y=bottom), Point2(x=left, y=bottom)]
-            annotations_msg.points.append(bbox_annotation)
 
             text_annotation = TextAnnotation()
             text_annotation.timestamp = depth_msg.header.stamp
