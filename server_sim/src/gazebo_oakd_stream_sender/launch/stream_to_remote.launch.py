@@ -21,7 +21,6 @@ def generate_launch_description():
             executable='sim_camera_encoder_node',
             name='sim_camera_encoder',
             remappings=[
-                ('~/rgb', '/oakd/rgb/image_raw'),
                 ('~/rgb/ffmpeg', '/oakd/rgb/image_raw/ffmpeg'),
                 ('~/depth/zstd', '/oakd/depth/image_raw/zstd'),
             ],

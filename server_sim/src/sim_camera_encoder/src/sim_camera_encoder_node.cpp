@@ -1,18 +1,23 @@
 // Copyright 2026 k-dev
 
 #include <chrono>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <string>
 
 #include <cv_bridge/cv_bridge.hpp>
+#include <ffmpeg_encoder_decoder/encoder.hpp>
+#include <ffmpeg_image_transport_msgs/msg/ffmpeg_packet.hpp>
 #include <gz/msgs/image.pb.h>
 #include <gz/transport/Node.hh>
-#include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include "sim_camera_encoder/depth_conversion.hpp"
 #include "sim_camera_encoder/zstd_depth_encoder.hpp"
+
+using FFMPEGPacket = ffmpeg_image_transport_msgs::msg::FFMPEGPacket;
 
 class SimCameraEncoder : public rclcpp::Node
 {
@@ -20,11 +25,17 @@ public:
   SimCameraEncoder()
   : Node("sim_camera_encoder")
   {
-    auto qos = rmw_qos_profile_default;
-    qos.history = RMW_QOS_POLICY_HISTORY_KEEP_LAST;
-    qos.depth = 2;
-    qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
-    rgb_pub_ = image_transport::create_publisher(this, "~/rgb", qos);
+    rgb_pub_ = create_publisher<FFMPEGPacket>(
+      "~/rgb/ffmpeg", rclcpp::QoS(rclcpp::KeepLast(2)).reliable());
+    const std::string rgb_base = "sim_camera_encoder.rgb.ffmpeg.";
+    rgb_encoder_.setEncoder(declare_parameter<std::string>(rgb_base + "encoder", "hevc_nvenc"));
+    rgb_encoder_.addAVOption(
+      "preset", declare_parameter<std::string>(rgb_base + "preset", "p1"));
+    rgb_encoder_.addAVOption("tune", declare_parameter<std::string>(rgb_base + "tune", "ull"));
+    rgb_encoder_.setBitRate(declare_parameter<int>(rgb_base + "bit_rate", 20000000));
+    rgb_encoder_.setGOPSize(declare_parameter<int>(rgb_base + "gop_size", 10));
+    rgb_encoder_.setMaxBFrames(declare_parameter<int>(rgb_base + "max_b_frames", 0));
+    rgb_encoder_.setFrameRate(30, 1);
     depth_pub_ = create_publisher<sensor_msgs::msg::CompressedImage>(
       "~/depth/zstd", rclcpp::QoS(rclcpp::KeepLast(2)).reliable());
     zstd_level_ = declare_parameter<int>("depth_zstd_level", 1);
@@ -40,7 +51,28 @@ public:
     timer_ = create_wall_timer(std::chrono::seconds(5), [this]() {report();});
   }
 
+  ~SimCameraEncoder() override
+  {
+    if (rgb_encoder_.isInitialized()) {rgb_encoder_.flush();}
+  }
+
 private:
+  void publish_rgb_packet(
+    const std::string & frame_id, const rclcpp::Time & stamp, const std::string & encoding,
+    uint32_t width, uint32_t height, uint64_t pts, uint8_t flags, uint8_t * data, size_t size)
+  {
+    FFMPEGPacket packet;
+    packet.header.frame_id = frame_id;
+    packet.header.stamp = stamp;
+    packet.width = width;
+    packet.height = height;
+    packet.encoding = encoding;
+    packet.pts = pts;
+    packet.flags = flags;
+    packet.is_bigendian = false;
+    packet.data.assign(data, data + size);
+    rgb_pub_->publish(packet);
+  }
   using Queue = std::map<int64_t, gz::msgs::Image>;
   static int64_t stamp(const gz::msgs::Image & msg)
   {
@@ -91,7 +123,20 @@ private:
     for (size_t i = 0; i < count; ++i) {
       output[i] = sim_camera_encoder::metres_to_millimetres(input[i]);
     }
-    rgb_pub_.publish(cv_bridge::CvImage(header, "bgr8", bgr).toImageMsg());
+    auto rgb_image = cv_bridge::CvImage(header, "bgr8", bgr).toImageMsg();
+    if (!rgb_encoder_.isInitialized()) {
+      const auto callback = std::bind(
+        &SimCameraEncoder::publish_rgb_packet, this, std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
+        std::placeholders::_5, std::placeholders::_6, std::placeholders::_7,
+        std::placeholders::_8, std::placeholders::_9);
+      if (!rgb_encoder_.initialize(rgb_image->width, rgb_image->height, callback,
+        rgb_image->encoding))
+      {
+        throw std::runtime_error("RGB encoder initialization failed");
+      }
+    }
+    rgb_encoder_.encodeImage(*rgb_image);
     auto depth_image = cv_bridge::CvImage(header, "16UC1", depth_mm).toImageMsg();
     depth_pub_->publish(sim_camera_encoder::encode_zstd_image(*depth_image, zstd_level_));
     ++published_;
@@ -107,7 +152,8 @@ private:
       rgb_received_, depth_received_, published_, rgb_dropped_, depth_dropped_, malformed_,
       rgb_.size(), depth_.size());
   }
-  image_transport::Publisher rgb_pub_;
+  rclcpp::Publisher<FFMPEGPacket>::SharedPtr rgb_pub_;
+  ffmpeg_encoder_decoder::Encoder rgb_encoder_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr depth_pub_;
   std::unique_ptr<gz::transport::Node> gz_node_;
   Queue rgb_, depth_;
