@@ -3,7 +3,7 @@
     <Domain id="any">
         <General>
 
-            <MaxMessageSize>12MB</MaxMessageSize>
+            <MaxMessageSize>1472B</MaxMessageSize>
             <FragmentSize>1344B</FragmentSize>
             <AllowMulticast>spdp</AllowMulticast>
         </General>

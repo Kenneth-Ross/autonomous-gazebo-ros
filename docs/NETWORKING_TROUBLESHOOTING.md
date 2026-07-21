@@ -62,7 +62,7 @@ Configured CycloneDDS to use **Static Peers** instead of relying on multicast. A
   <Domain id="any">
     <General>
       <NetworkInterfaceAddress>your_interface_name_or_ip</NetworkInterfaceAddress>
-      <MaxMessageSize>12MB</MaxMessageSize>
+      <MaxMessageSize>1472B</MaxMessageSize>
       <FragmentSize>1344B</FragmentSize>
       <AllowMulticast>spdp</AllowMulticast>
     </General>
