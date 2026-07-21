@@ -58,3 +58,11 @@ cd /path/to/ros2_gazebo
 ```
 
 This uses ROS simulated time for capture-to-edge latency and records rate, queue, error, RSS, thread, and CPU evidence. It does not require network sysctl or interface queue changes.
+
+After the soak completes, stop the receiver launched by hand. Run the receiver-owned adversarial sequence:
+
+```bash
+./scripts/validation/camera_edge_adversarial.sh
+```
+
+Do not run this concurrently with the soak or another `/camera_decoder`.

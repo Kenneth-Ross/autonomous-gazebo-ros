@@ -69,6 +69,15 @@ cd /path/to/ros2_gazebo
 
 The soak fails automatically if paired rate averages below 29.5 FPS, the pairing queue exceeds 16 entries, drop/malformed counters grow, DDS/codec errors appear, p95 simulated capture-to-publication latency reaches 150 ms, thread count grows by more than two, or RSS grows above 5% after the 60-second warm-up. It emits one pasteable summary and retains a UTC-stamped evidence log.
 
+After the soak, stop the existing receiver and run the Orange Pi adversarial sequence:
+
+```bash
+cd /path/to/ros2_gazebo
+./scripts/validation/camera_edge_adversarial.sh
+```
+
+This script owns and safely restarts its receiver process. It verifies baseline recovery at 29 FPS or better, receiver stop/restart, a 250 ms slow best-effort subscriber, malformed Zstd rejection, post-fault recovery, and absence of DDS/FFmpeg/Zstd transport failures. Sender restart, Ethernet interruption, missing streams, CPU/memory pressure, full-stack component restarts, and hardware/software HEVC comparison remain separate server-controlled cases.
+
 Capture process RSS and thread counts during the soak. Latency evidence must state
 clock synchronization and percentile method. If `send_packet failed` remains in
 camera-only testing, record the exact error first; only `EAGAIN` justifies a
