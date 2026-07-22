@@ -33,7 +33,7 @@ Delayed detections are matched to perception depth by an explicit exact-timestam
 
 
 Full-stack SLAM consumes an internal exact-pair feed on `/edge/slam/{rgb,depth}/{image_raw,camera_info}`. The decoder gates this newest synchronized feed to configurable `slam_rate_hz` (default 10 Hz), while public `/edge/camera/...` sensor outputs remain 30 FPS. Both image feeds use best-effort KeepLast(1); CameraInfo remains reliable KeepLast(1).
-Full-stack odometry ownership is explicit: Gazebo publishes `/odom`, RGB-D odometry publishes `/rgbd_odometry/odom` without TF, the covariance injector feeds the EKF, the EKF publishes `/odometry/filtered` and owns `odom -> base_link`, and namespaced RTAB-Map consumes `/odometry/filtered` and publishes maps under `/rtabmap/*`.
+Full-stack odometry ownership is explicit: Gazebo publishes `/odom`, the covariance injector feeds the EKF, the EKF owns `odom -> base_link`, and namespaced RTAB-Map consumes that TF while publishing maps under `/rtabmap/*`. RGB-D odometry is not launched because visual-odometry fusion is disabled; RTAB-Map still consumes the bounded RGB-D image feed directly.
 
 Edge exposes optional `rgb_decoder_av_options`, default empty. Orange Pi `hevc_rkmpp` rejected `flags:low_delay`, so it is not requested. Stage p95 metrics distinguish RGB decode, depth wire arrival, and final paired publication.
 

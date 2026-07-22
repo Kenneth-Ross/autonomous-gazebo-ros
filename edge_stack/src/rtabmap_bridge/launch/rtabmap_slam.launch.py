@@ -37,16 +37,11 @@ def launch_setup(context):
                   ('rgb/camera_info', '/edge/slam/rgb/camera_info'),
                   ('depth/camera_info', '/edge/slam/depth/camera_info')]
         components.extend([
-            ComposableNode(package='rtabmap_odom', plugin='rtabmap_odom::RGBDOdometry',
-                           name='rgbd_odometry', parameters=[dict(common, qos=2, publish_tf=False)],
-                           remappings=remaps + [('odom', '/rgbd_odometry/odom')],
-                           extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(package='rtabmap_slam', plugin='rtabmap_slam::CoreWrapper',
                            name='rtabmap', namespace='rtabmap', parameters=[dict(common, subscribe_depth=True,
                            subscribe_rgb=True, subscribe_landmarks=enabled['enable_landmarks'],
                            map_frame_id='map', odom_frame_id='odom')], remappings=remaps +
-                           [('landmark_detections', '/edge/landmark_detections'),
-                            ('odom', '/odometry/filtered')],
+                           [('landmark_detections', '/edge/landmark_detections')],
                            extra_arguments=[{'use_intra_process_comms': True}])])
     actions = [
         SetEnvironmentVariable('CYCLONEDDS_URI', cyclone_uri(interface, local, peer)),
