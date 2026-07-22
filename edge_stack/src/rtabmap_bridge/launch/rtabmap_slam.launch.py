@@ -62,7 +62,9 @@ def launch_setup(context):
                          'model_path': cfg['npu_model_path']}], output='screen'))
     if enabled['enable_landmarks']:
         actions.append(Node(package='rtabmap_bridge', executable='cone_landmark_processor',
-            parameters=[{'use_sim_time': use_sim_time}], output='screen'))
+            parameters=[{'use_sim_time': use_sim_time,
+                         'candidate_max_range_m': float(cfg['landmark_candidate_max_range_m']),
+                         'max_range_m': float(cfg['landmark_max_range_m'])}], output='screen'))
     if enabled['enable_slam']:
         share = get_package_share_directory('rtabmap_bridge')
         actions.extend([
@@ -81,6 +83,8 @@ def generate_launch_description():
         DeclareLaunchArgument('peer_address', default_value='10.10.12.10'),
         DeclareLaunchArgument('preview_rate_hz', default_value='5.0'),
         DeclareLaunchArgument('slam_rate_hz', default_value='10.0'),
+        DeclareLaunchArgument('landmark_candidate_max_range_m', default_value='20.0'),
+        DeclareLaunchArgument('landmark_max_range_m', default_value='20.0'),
         DeclareLaunchArgument('rgb_decoder_av_options', default_value=''),
         DeclareLaunchArgument('npu_model_path', default_value='')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (

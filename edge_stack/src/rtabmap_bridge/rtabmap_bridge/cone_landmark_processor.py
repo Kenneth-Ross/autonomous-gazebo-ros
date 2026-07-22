@@ -9,7 +9,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from foxglove_msgs.msg import ImageAnnotations, PointsAnnotation, TextAnnotation, Point2
 from cv_bridge import CvBridge
 import numpy as np
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from tf2_ros import Buffer, TransformListener
 import tf2_geometry_msgs
@@ -31,6 +31,11 @@ class ConeLandmarkProcessor(Node):
         # List of dicts: {'position': np.array([x, y, z]), 'class': str, 'hits': int}
         self.candidates = []
         self.min_hits = 2
+        self.candidate_max_range_m = float(
+            self.declare_parameter('candidate_max_range_m', 20.0).value)
+        self.max_range_m = float(self.declare_parameter('max_range_m', 20.0).value)
+        self.promotion_metrics = Counter()
+        self.metrics_timer = self.create_timer(5.0, self.log_promotion_metrics)
         
         self.next_landmark_id = 1
         
@@ -94,6 +99,22 @@ class ConeLandmarkProcessor(Node):
         base_threshold = 2.5
         depth_scaling = 0.05 * depth_m
         return min(base_threshold + depth_scaling, 3.5)
+    def log_promotion_metrics(self):
+        metrics = self.promotion_metrics
+        self.get_logger().info(
+            'Landmark promotion: '
+            f"detections={metrics['detections']} "
+            f"invalid_depth={metrics['invalid_depth']} "
+            f"range_rejected={metrics['range_rejected']} "
+            f"geometry_rejected={metrics['geometry_rejected']} "
+            f"transform_rejected={metrics['transform_rejected']} "
+            f"candidate_range_rejected={metrics['candidate_range_rejected']} "
+            f"candidates_created={metrics['candidates_created']} "
+            f"candidates_matched={metrics['candidates_matched']} "
+            f"persistent_matched={metrics['persistent_matched']} "
+            f"promoted={metrics['promoted']} "
+            f"active_candidates={len(self.candidates)} landmarks={len(self.landmarks)}")
+        metrics.clear()
 
     def callback(self, depth_msg, yolo_msg):
         if self.camera_info is None:
@@ -149,6 +170,7 @@ class ConeLandmarkProcessor(Node):
             t_map = None
 
         for det in yolo_msg.detections:
+            self.promotion_metrics['detections'] += 1
             u_center = det.bbox.center.position.x
             v_center = det.bbox.center.position.y
             size_x = det.bbox.size_x
@@ -180,6 +202,7 @@ class ConeLandmarkProcessor(Node):
             roi = depth_img[y_start:y_end, x_start:x_end]
             valid_mask = (roi > 0) & (~np.isnan(roi))
             if not np.any(valid_mask):
+                self.promotion_metrics['invalid_depth'] += 1
                 continue
                 
             # 25th percentile depth (avoid background)
@@ -196,7 +219,8 @@ class ConeLandmarkProcessor(Node):
                 self.get_logger().info(f"Depth check: raw_z={raw_z:.1f}, scaled z_m={z_m:.3f}m")
             
             # Max range cutoff (increased for simulation, real OAK-D gets noisy past 6-8m)
-            if z_m > 20.0:
+            if z_m > self.max_range_m:
+                self.promotion_metrics['range_rejected'] += 1
                 continue
                 
             # Geometric Consistency Filter
@@ -209,9 +233,11 @@ class ConeLandmarkProcessor(Node):
             # these bounds MUST be tightened (e.g. 0.15 < phys_h < 0.5) to aggressively 
             # reject false positives like people or poles.
             if not (0.05 < phys_w < 0.8 and 0.1 < phys_h < 1.2):
+                self.promotion_metrics['geometry_rejected'] += 1
                 continue
                 
             if phys_w > phys_h * 1.5:
+                self.promotion_metrics['geometry_rejected'] += 1
                 continue
             
             x_c = ((u_center - cx) * z_m) / fx
@@ -249,6 +275,7 @@ class ConeLandmarkProcessor(Node):
                             matched_lm = lm
                 
                 if matched_lm is not None:
+                    self.promotion_metrics['persistent_matched'] += 1
                     # Do NOT update position of persistent landmarks to prevent drift from odom errors
                     landmark_id = matched_lm['id']
                 else:
@@ -263,6 +290,7 @@ class ConeLandmarkProcessor(Node):
                                 matched_cand = cand
                     
                     if matched_cand is not None:
+                        self.promotion_metrics['candidates_matched'] += 1
                         matched_cand['position'] = 0.5 * matched_cand['position'] + 0.5 * map_pos
                         matched_cand['hits'] += 2 # Restore the 1 we subtracted, plus 1 for this hit
                         if matched_cand['hits'] >= self.min_hits:
@@ -275,21 +303,24 @@ class ConeLandmarkProcessor(Node):
                                 'class': class_id
                             })
                             self.get_logger().info(f"PROMOTED candidate to landmark: {class_id} (ID: {landmark_id}) at {matched_cand['position']}")
+                            self.promotion_metrics['promoted'] += 1
                             self.candidates = [c for c in self.candidates if c is not matched_cand]
                         else:
                             landmark_id = -1 # Not ready yet
                     else:
-                        # Dynamic Depth Gating: Only initialize NEW cone candidates if they are within 12.0 meters.
-                        # This prevents extremely noisy depth measurements at 15m+ from spawning false duplicates,
-                        # while still allowing us to track existing cones up to 20m.
-                        if z_m < 12.0:
+                        # Simulation permits candidate creation through configured sensor range.
+                        if z_m <= self.candidate_max_range_m:
                             self.candidates.append({
                                 'position': map_pos,
                                 'class': class_id,
                                 'hits': 1
                             })
+                            self.promotion_metrics['candidates_created'] += 1
+                        else:
+                            self.promotion_metrics['candidate_range_rejected'] += 1
                         landmark_id = -1
             else:
+                self.promotion_metrics['transform_rejected'] += 1
                 landmark_id = -1
             
 
