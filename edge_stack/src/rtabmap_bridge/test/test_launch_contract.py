@@ -72,3 +72,6 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "namespace='rtabmap'" in launch
     assert "('landmark_detections', '/edge/landmark_detections')" in launch
     assert "('odom', '/odometry/filtered')" not in launch
+    assert "package='edge_sensor_filters'" in launch
+    assert "plugin='edge_sensor_filters::SensorCovarianceInjector'" in launch
+    assert "executable='sensor_covariance_injector'" not in launch

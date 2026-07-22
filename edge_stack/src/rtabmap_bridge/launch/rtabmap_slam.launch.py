@@ -42,6 +42,11 @@ def launch_setup(context):
                            subscribe_rgb=True, subscribe_landmarks=enabled['enable_landmarks'],
                            map_frame_id='map', odom_frame_id='odom')], remappings=remaps +
                            [('landmark_detections', '/edge/landmark_detections')],
+                           extra_arguments=[{'use_intra_process_comms': True}]),
+            ComposableNode(package='edge_sensor_filters',
+                           plugin='edge_sensor_filters::SensorCovarianceInjector',
+                           name='sensor_covariance_injector',
+                           parameters=[{'use_sim_time': use_sim_time}],
                            extra_arguments=[{'use_intra_process_comms': True}])])
     actions = [
         SetEnvironmentVariable('CYCLONEDDS_URI', cyclone_uri(interface, local, peer)),
@@ -70,9 +75,7 @@ def launch_setup(context):
         actions.extend([
             Node(package='robot_localization', executable='ekf_node', name='ekf_filter_node',
                  parameters=[os.path.join(share, 'config', 'ekf.yaml'),
-                             {'use_sim_time': use_sim_time}], output='screen'),
-            Node(package='rtabmap_bridge', executable='sensor_covariance_injector',
-                 parameters=[{'use_sim_time': use_sim_time}], output='screen')])
+                             {'use_sim_time': use_sim_time}], output='screen')])
     return actions
 
 

@@ -14,5 +14,4 @@ setup(name=package_name, version='0.1.0', packages=find_packages(exclude=['test'
       'cone_detector_npu = rtabmap_bridge.cone_detector_npu:main',
       'cone_landmark_processor = rtabmap_bridge.cone_landmark_processor:main',
       'ground_truth_broadcaster = rtabmap_bridge.ground_truth_broadcaster:main',
-      'sensor_covariance_injector = rtabmap_bridge.sensor_covariance_injector:main',
       'multimedia_preflight = rtabmap_bridge.multimedia_preflight:main']})
