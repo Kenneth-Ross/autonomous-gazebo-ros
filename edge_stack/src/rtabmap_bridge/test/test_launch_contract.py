@@ -70,6 +70,9 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "DeclareLaunchArgument('landmark_candidate_max_range_m', default_value='20.0')" in launch
     assert "while len(self.depth_frames) > 8" in landmark
     assert "self.depth_frames.pop(self.stamp_key(msg.header), None)" in landmark
+    assert "landmarks_msg.header.frame_id = 'base_link'" in landmark
+    assert "'base_link', depth_msg.header.frame_id, stamp" in landmark
+    assert "lm_det.pose.pose.position.x = float(base_pos[0])" in landmark
     assert "'/edge/landmark_detections'" in landmark
     assert "namespace='rtabmap'" in launch
     assert "('landmark_detections', '/edge/landmark_detections')" in launch
