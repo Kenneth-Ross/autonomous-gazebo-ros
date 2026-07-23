@@ -155,7 +155,6 @@ class ConeLandmarkProcessor(Node):
         # Prepare RTAB-Map LandmarkDetections message
         landmarks_msg = LandmarkDetections()
         landmarks_msg.header = depth_msg.header
-        landmarks_msg.header.frame_id = 'base_link'
         annotations_msg = ImageAnnotations()
         annotations_msg.timestamp = depth_msg.header.stamp
         stamp = depth_msg.header.stamp
@@ -169,15 +168,6 @@ class ConeLandmarkProcessor(Node):
         except Exception as e:
             self.get_logger().warn(f"Map transform not yet available: {e}", throttle_duration_sec=2.0)
             t_map = None
-        try:
-            t_base = self.tf_buffer.lookup_transform(
-                'base_link', depth_msg.header.frame_id, stamp,
-                rclpy.duration.Duration(seconds=0.0)
-            )
-        except Exception as e:
-            self.get_logger().warn(
-                f"Base transform not available: {e}", throttle_duration_sec=2.0)
-            t_base = None
 
         for det in yolo_msg.detections:
             self.promotion_metrics['detections'] += 1
@@ -265,20 +255,6 @@ class ConeLandmarkProcessor(Node):
                 map_pos = np.array([p_transformed.point.x, p_transformed.point.y, p_transformed.point.z])
             else:
                 map_pos = None
-
-            if t_base is not None:
-                p_base = PointStamped()
-                p_base.header.frame_id = depth_msg.header.frame_id
-                p_base.header.stamp = stamp
-                p_base.point.x = float(x_c)
-                p_base.point.y = float(y_c)
-                p_base.point.z = float(z_c)
-                p_base_transformed = tf2_geometry_msgs.do_transform_point(p_base, t_base)
-                base_pos = np.array([p_base_transformed.point.x,
-                                     p_base_transformed.point.y,
-                                     p_base_transformed.point.z])
-            else:
-                base_pos = None
             
             class_id = "cone"
             if det.results:
@@ -360,15 +336,15 @@ class ConeLandmarkProcessor(Node):
             annotations_msg.texts.append(text_annotation)
 
             # Only send to RTAB-Map if it's a persistent landmark
-            if landmark_id != -1 and base_pos is not None:
+            if landmark_id != -1:
                 lm_det = LandmarkDetection()
                 lm_det.id = landmark_id
                 lm_det.landmark_frame_id = f"{class_id}_{landmark_id}"
                 lm_det.size = float(max(size_x, size_y) * z_m / fx)
                 
-                lm_det.pose.pose.position.x = float(base_pos[0])
-                lm_det.pose.pose.position.y = float(base_pos[1])
-                lm_det.pose.pose.position.z = float(base_pos[2])
+                lm_det.pose.pose.position.x = float(x_c)
+                lm_det.pose.pose.position.y = float(y_c)
+                lm_det.pose.pose.position.z = float(z_c)
                 lm_det.pose.pose.orientation.w = 1.0
                 
                 lm_det.pose.covariance[0] = 0.05
