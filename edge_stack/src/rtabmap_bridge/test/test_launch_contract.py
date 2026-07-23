@@ -43,7 +43,9 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     ekf = (Path(__file__).parents[1] / 'config' / 'ekf.yaml').read_text()
     assert 'odom1:' not in ekf
     assert "'qos_camera_info': 1" in launch
-    assert "'sync_queue_size': 2" in launch
+    assert "'approx_sync': True" in launch
+    assert "'approx_sync_max_interval': 0.05" in launch
+    assert "'sync_queue_size': 10" in launch
     assert "'queue_size': 2" not in launch
     assert "'slam_rate_hz': float(cfg['slam_rate_hz'])" in launch
     assert "('rgb/image', '/edge/slam/rgb/image_raw')" in launch

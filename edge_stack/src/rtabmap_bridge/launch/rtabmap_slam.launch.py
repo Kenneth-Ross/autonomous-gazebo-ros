@@ -30,8 +30,8 @@ def launch_setup(context):
         extra_arguments=[{'use_intra_process_comms': True}])]
     if enabled['enable_slam']:
         common = {'use_sim_time': use_sim_time, 'frame_id': 'base_link',
-                  'qos_image': 2, 'qos_camera_info': 1, 'approx_sync': False,
-                  'sync_queue_size': 2}
+                  'qos_image': 2, 'qos_camera_info': 1, 'approx_sync': True,
+                  'approx_sync_max_interval': 0.05, 'sync_queue_size': 10}
         remaps = [('rgb/image', '/edge/slam/rgb/image_raw'),
                   ('depth/image', '/edge/slam/depth/image_raw'),
                   ('rgb/camera_info', '/edge/slam/rgb/camera_info'),
