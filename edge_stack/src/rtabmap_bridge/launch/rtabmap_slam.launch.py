@@ -40,8 +40,9 @@ def launch_setup(context):
             ComposableNode(package='rtabmap_slam', plugin='rtabmap_slam::CoreWrapper',
                            name='rtabmap', namespace='rtabmap', parameters=[dict(common, subscribe_depth=True,
                            subscribe_rgb=True, subscribe_landmarks=enabled['enable_landmarks'],
-                           map_frame_id='map', odom_frame_id='odom')], remappings=remaps +
-                           [('landmark_detections', '/edge/landmark_detections')],
+                           map_frame_id='map', odom_frame_id='')], remappings=remaps +
+                           [('odom', '/odometry/filtered'),
+                            ('landmark_detections', '/edge/landmark_detections')],
                            extra_arguments=[{'use_intra_process_comms': True}]),
             ComposableNode(package='edge_sensor_filters',
                            plugin='edge_sensor_filters::SensorCovarianceInjector',
