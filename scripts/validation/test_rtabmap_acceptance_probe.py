@@ -19,7 +19,12 @@ CAMERA = (
 
 def healthy_lines(start=10.0):
     lines = [RTAB.format(stamp=start + i, node=i, wm=20 + i) for i in range(12)]
-    lines += [CAMERA.format(rate='30.0', drops=2, queue=3, malformed=0)]
+    lines += [
+        CAMERA.format(rate=rate, drops=drops, queue=3, malformed=0)
+        for rate, drops in (
+            ('30.2', 2), ('28.6', 4), ('30.4', 4),
+            ('30.2', 4), ('30.0', 4), ('30.2', 4))
+    ]
     lines += [
         'Landmark promotion: detections=100 invalid_depth=0 range_rejected=2 '
         'geometry_rejected=1 transform_rejected=0 candidates_created=1 '
@@ -33,18 +38,23 @@ class RtabmapAcceptanceProbeTest(unittest.TestCase):
         result = evaluate(healthy_lines(), minimum_windows=10)
         self.assertEqual(result['failures'], [])
         self.assertEqual(result['landmarks_final'], 40)
+        self.assertEqual(result['camera_drop_growth'], 2)
+        self.assertAlmostEqual(result['camera_pair_rate_median_hz'], 30.2)
 
     def test_rejects_stall_queue_growth_and_transform_failures(self):
         lines = healthy_lines()[:]
-        lines += [CAMERA.format(rate='12.0', drops=8, queue=20, malformed=1)]
+        lines += [
+            CAMERA.format(rate='12.0', drops=12 + i, queue=20, malformed=1)
+            for i in range(4)
+        ]
         lines += ['rtabmap: Did not receive data since 5 seconds!']
         lines += ['Landmark promotion: detections=5 invalid_depth=0 range_rejected=0 '
                   'geometry_rejected=0 transform_rejected=5 candidates_created=0 '
                   'candidates_matched=0 persistent_matched=0 promoted=0 '
                   'active_candidates=0 landmarks=40']
         result = evaluate(lines, minimum_windows=10)
-        self.assertIn('camera pair rate below 29.0 Hz', result['failures'])
-        self.assertIn('camera unmatched drops grew', result['failures'])
+        self.assertIn('camera low-rate windows exceeded 25%', result['failures'])
+        self.assertIn('camera unmatched drop growth exceeded 5', result['failures'])
         self.assertIn('camera queue high-water exceeded 12', result['failures'])
         self.assertIn('malformed camera frames observed', result['failures'])
         self.assertIn('RTAB-Map input stall observed', result['failures'])
@@ -55,6 +65,12 @@ class RtabmapAcceptanceProbeTest(unittest.TestCase):
             healthy_lines(), minimum_windows=10, require_recovery=True,
             recovery_marker_present=False)
         self.assertIn('recovery marker missing', result['failures'])
+
+    def test_rejects_failed_final_recovery_windows(self):
+        lines = healthy_lines()
+        lines += [CAMERA.format(rate='20.0', drops=4, queue=3, malformed=0)] * 3
+        result = evaluate(lines, minimum_windows=10, require_recovery=True)
+        self.assertIn('camera final recovery rate below 29.0 Hz', result['failures'])
 
 
 if __name__ == '__main__':

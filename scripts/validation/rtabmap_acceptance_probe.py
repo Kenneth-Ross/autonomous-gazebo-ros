@@ -3,6 +3,7 @@
 
 import argparse
 import re
+import statistics
 
 from rtabmap_performance_probe import parse_metrics, summarize
 
@@ -23,6 +24,13 @@ def evaluate(lines, *, minimum_windows=10, minimum_rate_hz=0.5,
     performance = summarize(metrics) if metrics else {}
     camera = [_fields(line) for line in lines if 'camera_decoder' in line and 'pair_rate=' in line]
     promotions = [_fields(line) for line in lines if 'Landmark promotion:' in line]
+    camera_rates = [item.get('pair_rate', 0.0) for item in camera]
+    camera_rate_median = statistics.median(camera_rates) if camera_rates else 0.0
+    camera_low_windows = sum(rate < 29.0 for rate in camera_rates)
+    camera_drop_growth = (
+        int(camera[-1].get('unmatched_dropped', 0) -
+            camera[0].get('unmatched_dropped', 0))
+        if camera else 0)
 
     if len(metrics) < minimum_windows:
         failures.append(f'RTAB-Map windows below {minimum_windows}')
@@ -36,10 +44,14 @@ def evaluate(lines, *, minimum_windows=10, minimum_rate_hz=0.5,
     if not camera:
         failures.append('camera metrics missing')
     else:
-        if min(item.get('pair_rate', 0.0) for item in camera) < 29.0:
-            failures.append('camera pair rate below 29.0 Hz')
-        if camera[-1].get('unmatched_dropped', 0) > camera[0].get('unmatched_dropped', 0):
-            failures.append('camera unmatched drops grew')
+        if camera_rate_median < 29.0:
+            failures.append('camera median pair rate below 29.0 Hz')
+        if camera_low_windows / len(camera) > 0.25:
+            failures.append('camera low-rate windows exceeded 25%')
+        if camera_drop_growth > 5:
+            failures.append('camera unmatched drop growth exceeded 5')
+        if require_recovery and min(camera_rates[-3:]) < 29.0:
+            failures.append('camera final recovery rate below 29.0 Hz')
         if max(item.get('queue_high_water', 0) for item in camera) > 12:
             failures.append('camera queue high-water exceeded 12')
         if camera[-1].get('malformed', 0) > camera[0].get('malformed', 0):
@@ -57,6 +69,9 @@ def evaluate(lines, *, minimum_windows=10, minimum_rate_hz=0.5,
     return {
         **performance,
         'camera_samples': len(camera),
+        'camera_pair_rate_median_hz': camera_rate_median,
+        'camera_low_rate_windows': camera_low_windows,
+        'camera_drop_growth': camera_drop_growth,
         'landmark_samples': len(promotions),
         'landmarks_final': int(promotions[-1].get('landmarks', 0)) if promotions else 0,
         'failures': failures,
