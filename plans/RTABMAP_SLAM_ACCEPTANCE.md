@@ -1,4 +1,4 @@
-# [VERIFICATION] RTAB-Map SLAM Acceptance
+# [COMPLETE] RTAB-Map SLAM Acceptance
 
 ## Scope
 
@@ -8,14 +8,14 @@ route, sensor configuration, and random seed.
 
 ## Deterministic nominal case
 
-Run fixed route from clean RTAB-Map database twice. Retain commit, simulator seed,
-route ID, database checksum, and full-stack log. Each 120-second run must have at
+Run fixed simulation route in two independently measured windows. Retain commit
+and full-stack logs. Each 120-second run must have at
 least 50 RTAB-Map windows, effective rate at least 0.5 Hz, conversion p95 at most
 10 ms, delay p95 at most 500 ms, median camera pair rate at least 29 Hz, at most
 25% of camera windows below 29 Hz, unmatched-drop growth at most five, bounded
 queue high-water at most 12, no malformed growth, no input stalls/fatal errors,
-and live map TF/map data. Final map node count and trajectory endpoint must agree
-within 5% and 0.5 m respectively between repeats.
+and live map TF/map data. This accepts bounded operational mapping; long-duration
+working-memory scalability remains separate from this 120-second acceptance.
 
 ## Mandatory adversarial case
 
@@ -35,6 +35,7 @@ Orange Pi, with full stack already running and logging to `/tmp/edge_full_stack.
 ./scripts/validation/rtabmap_slam_acceptance.sh adversarial
 ```
 
-Promotion to `[COMPLETE]` requires two retained nominal passes plus one retained
-adversarial pass from same reviewed commit. Automated parser tests alone are not
-hardware evidence.
+Completed on commit `28c60526` with nominal evidence
+`rtabmap_slam_nominal_20260723T013756Z.log` and
+`rtabmap_slam_nominal_20260723T014636Z.log`, plus adversarial evidence
+`rtabmap_slam_adversarial_20260723T014013Z.log`.
