@@ -35,6 +35,7 @@ install(PROGRAMS
   my_gazebo_package_py/nodes/driving_model_node.py
   my_gazebo_package_py/nodes/random_drive_node.py
   my_gazebo_package_py/nodes/validation_node.py
+  my_gazebo_package_py/nodes/run_recorder_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -46,6 +47,24 @@ install(DIRECTORY
   resource
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(driving_model_control_test
+    test/test_driving_model_control.py
+  )
+  ament_add_pytest_test(vehicle_kinematic_contract_test
+    test/test_vehicle_kinematic_contract.py
+  )
+  ament_add_pytest_test(track_selection_contract_test
+    test/test_track_selection_contract.py
+  )
+  ament_add_pytest_test(run_artifacts_contract_test
+    test/test_run_artifacts.py
+  )
+  find_package(launch_testing_ament_cmake REQUIRED)
+  add_launch_test(test/test_driving_model_runtime.py TIMEOUT 30)
+endif()
 
 # Install ament index
 ament_index_register_resource("package")

@@ -41,8 +41,9 @@ fi
 
 # 3. Handle Arguments
 # Usage: ./launch_sim.sh [track_name] [headless_true_false]
-# Track names: oval, figure_eight, hairpin, slalom, rectangle, random (default)
-TRACK_NAME=${1:-random}
+# Track names: catalunya (default), oval, figure_eight, hairpin, slalom,
+# rectangle, random
+TRACK_NAME=${1:-catalunya}
 HEADLESS=${2:-false}
 
 echo "------------------------------------------------"

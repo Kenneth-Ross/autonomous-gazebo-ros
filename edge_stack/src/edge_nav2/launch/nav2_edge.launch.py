@@ -1,22 +1,28 @@
 import os
+
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
     pkg_share = get_package_share_directory('edge_nav2')
-    
+
     # Parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    params_file = LaunchConfiguration('params_file', default=os.path.join(pkg_share, 'config', 'nav2_params.yaml'))
+    default_params = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
+    params_file = LaunchConfiguration(
+        'params_file', default=default_params)
+    ackermann_bt = os.path.join(
+        pkg_share, 'behavior_trees', 'navigate_to_pose_ackermann.xml')
 
     # Nodes to launch
     nav2_nodes = [
         'controller_server',
         'planner_server',
-        'recoveries_server',
+        'behavior_server',
         'bt_navigator',
         'waypoint_follower'
     ]
@@ -51,17 +57,17 @@ def generate_launch_description():
         output='screen',
         parameters=[params_file],
         remappings=[
-            ('/tf', 'tf'), 
+            ('/tf', 'tf'),
             ('/tf_static', 'tf_static'),
             ('cmd_vel', '/nav_cmd_vel')
         ]
     )
 
-    # Recoveries Server
-    recoveries_server = Node(
-        package='nav2_recoveries',
-        executable='recoveries_server',
-        name='recoveries_server',
+    # Ackermann-safe behavior server (backup and wait; no spin).
+    behavior_server = Node(
+        package='nav2_behaviors',
+        executable='behavior_server',
+        name='behavior_server',
         output='screen',
         parameters=[params_file],
         remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')]
@@ -73,7 +79,10 @@ def generate_launch_description():
         executable='bt_navigator',
         name='bt_navigator',
         output='screen',
-        parameters=[params_file],
+        parameters=[
+            params_file,
+            {'default_nav_to_pose_bt_xml': ackermann_bt},
+        ],
         remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')]
     )
 
@@ -102,12 +111,13 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
-        DeclareLaunchArgument('params_file', default_value=os.path.join(pkg_share, 'config', 'nav2_params.yaml')),
-        
+        DeclareLaunchArgument(
+            'params_file', default_value=default_params),
+
         lifecycle_manager,
         planner_server,
         controller_server,
-        recoveries_server,
+        behavior_server,
         bt_navigator,
         waypoint_follower,
         ackermann_bridge

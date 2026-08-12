@@ -1,69 +1,70 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
+from edge_nav2.ackermann_kinematics import bounded_yaw_rate, steering_angle
 from geometry_msgs.msg import Twist, TwistStamped
-from nav_msgs.msg import Odometry
-from std_msgs.msg import Float32
-import math
-import time
+import rclpy
+from rclpy._rclpy_pybind11 import RCLError
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+
 
 class Nav2AckermannBridge(Node):
     def __init__(self):
         super().__init__('nav2_ackermann_bridge')
 
-        # --- Parameters ---
         self.declare_parameter('wheelbase', 1.511)
         self.declare_parameter('min_velocity', 0.1)
+        self.declare_parameter('max_steering_angle', 0.6108)
 
         self.L = self.get_parameter('wheelbase').value
         self.min_vel = self.get_parameter('min_velocity').value
+        self.max_steering_angle = (
+            self.get_parameter('max_steering_angle').value)
 
-        # --- State ---
         self.target_vel = 0.0
         self.target_omega = 0.0
 
-        # --- Subscriptions ---
         self.create_subscription(Twist, '/nav_cmd_vel', self.nav_cmd_cb, 10)
-
-        # --- Publishers ---
-        # Brain sends high-level targets to the ECU
-        self.control_pub = self.create_publisher(TwistStamped, '/car/control_request', 10)
-
-        # --- Control Loop Timer (20Hz) ---
+        self.control_pub = self.create_publisher(
+            TwistStamped, '/car/control_request', 10)
         self.create_timer(0.05, self.control_loop)
 
-        self.get_logger().info('Nav2 Ackermann Bridge (v3 - High-Level Brain) started.')
+        self.get_logger().info(
+            'Nav2 Ackermann Bridge (v3 - High-Level Brain) started.')
 
     def nav_cmd_cb(self, msg):
         self.target_vel = msg.linear.x
         self.target_omega = msg.angular.z
 
     def control_loop(self):
-        # 1. Steering Target (Bicycle Model)
-        # Brain calculates the required steering angle for the ECU to achieve
-        v_eff = max(abs(self.target_vel), self.min_vel)
-        steering_angle = math.atan(self.L * self.target_omega / v_eff)
+        limited_omega = bounded_yaw_rate(
+            self.target_vel, self.target_omega, self.L,
+            self.max_steering_angle, self.min_vel,
+        )
+        target_steering = steering_angle(
+            self.target_vel, limited_omega, self.L, self.min_vel,
+            self.max_steering_angle,
+        )
 
-        # 2. Publish Unified Packet
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = "base_link"
-        
-        # High-level targets for the ECU:
-        # linear.x -> Target Velocity (m/s)
-        # angular.z -> Target Steering Angle (radians)
+        msg.header.frame_id = 'base_link'
         msg.twist.linear.x = float(self.target_vel)
-        msg.twist.angular.z = float(steering_angle)
-        
+        msg.twist.angular.z = float(target_steering)
         self.control_pub.publish(msg)
-
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = Nav2AckermannBridge()
-    rclpy.spin(node)
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException, RCLError):
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

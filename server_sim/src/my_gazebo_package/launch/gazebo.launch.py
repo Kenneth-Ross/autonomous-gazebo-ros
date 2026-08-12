@@ -9,6 +9,7 @@ from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.conditions import IfCondition
 
 
 def generate_launch_description():
@@ -38,8 +39,8 @@ def generate_launch_description():
     # Declare launch arguments
     declare_initial_track_arg = DeclareLaunchArgument(
         'initial_track',
-        default_value='random',
-        description='Initial track layout to spawn (oval, figure_eight, hairpin, slalom, rectangle, random)'
+        default_value='catalunya',
+        description='Initial track layout (default: SVG-derived Catalunya vector map)'
     )
 
     declare_headless_arg = DeclareLaunchArgument(
@@ -48,13 +49,34 @@ def generate_launch_description():
         description='Run Gazebo in server-only mode (headless)'
     )
 
+    declare_driving_model_arg = DeclareLaunchArgument(
+        'enable_driving_model',
+        default_value='false',
+        description='Launch the Brain-ECU driving model'
+    )
+
+    declare_camera_bridges_arg = DeclareLaunchArgument(
+        'enable_camera_bridges',
+        default_value='true',
+        description='Bridge Gazebo camera images into ROS topics'
+    )
+
+    declare_sensor_bridges_arg = DeclareLaunchArgument(
+        'enable_sensor_bridges',
+        default_value='true',
+        description='Bridge Gazebo vehicle sensors and control topics into ROS'
+    )
+
     initial_track = LaunchConfiguration('initial_track')
     headless = LaunchConfiguration('headless')
+    enable_driving_model = LaunchConfiguration('enable_driving_model')
+    enable_camera_bridges = LaunchConfiguration('enable_camera_bridges')
+    enable_sensor_bridges = LaunchConfiguration('enable_sensor_bridges')
 
-    # Gazebo args logic: -r for GUI, -s for Server-only
+    # Gazebo args: run immediately; add -s for server-only headless mode
     gz_args = PythonExpression([
-        "'-s ' if '", headless, "' == 'true' else '-r '",
-        " + '", world_file, "'"
+        "('-r -s ' if '", headless, "' == 'true' else '-r ') + '",
+        world_file, "'"
     ])
 
     return LaunchDescription([
@@ -62,6 +84,9 @@ def generate_launch_description():
         SetEnvironmentVariable(name='RMW_IMPLEMENTATION', value='rmw_cyclonedds_cpp'),
         declare_initial_track_arg,
         declare_headless_arg,
+        declare_driving_model_arg,
+        declare_camera_bridges_arg,
+        declare_sensor_bridges_arg,
         SetEnvironmentVariable(name='GZ_SIM_RESOURCE_PATH', value=gz_resource_path),
         # Launch Gazebo
         IncludeLaunchDescription(
@@ -111,6 +136,7 @@ def generate_launch_description():
             remappings=[
                 ('/oakd/rgbd_camera/camera_info', '/sim/camera/rgb/camera_info'),
             ],
+            condition=IfCondition(enable_camera_bridges),
             output='screen'
         ),
         
@@ -124,6 +150,7 @@ def generate_launch_description():
             remappings=[
                 ('/oakd/rgbd_camera/image', '/sim/camera/rgb/image_raw'),
             ],
+            condition=IfCondition(enable_camera_bridges),
             output='screen'
         ),
         
@@ -137,6 +164,7 @@ def generate_launch_description():
             remappings=[
                 ('/oakd/rgbd_camera/depth_image', '/sim/camera/depth/image_raw'),
             ],
+            condition=IfCondition(enable_camera_bridges),
             output='screen'
         ),
 
@@ -146,6 +174,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='odom_bridge',
             arguments=['/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry'],
+            condition=IfCondition(enable_sensor_bridges),
             output='screen'
         ),
 
@@ -155,6 +184,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='imu_bridge',
             arguments=['/imu@sensor_msgs/msg/Imu[gz.msgs.IMU'],
+            condition=IfCondition(enable_sensor_bridges),
             output='screen'
         ),
 
@@ -164,6 +194,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='joint_states_bridge',
             arguments=['/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model'],
+            condition=IfCondition(enable_sensor_bridges),
             output='screen'
         ),
 
@@ -173,6 +204,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='cmd_vel_bridge',
             arguments=['/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist'],
+            condition=IfCondition(enable_sensor_bridges),
             output='screen'
         ),
 
@@ -195,6 +227,7 @@ def generate_launch_description():
             name='gt_pose_bridge',
             arguments=['/world/default/dynamic_pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
             remappings=[('/world/default/dynamic_pose/info', '/ground_truth/tf')],
+            condition=IfCondition(enable_sensor_bridges),
             output='screen'
         ),
         
@@ -211,13 +244,14 @@ def generate_launch_description():
                     output='screen',
                     parameters=[{'initial_track': initial_track}]
                 ),
-                #Node(
-                #    package='my_gazebo_package',
-                #    executable='driving_model_node.py',
-                #    name='driving_model',
-                #    output='screen',
-                #    parameters=[{'auto_drive': False}]
-                #),
+                Node(
+                    package='my_gazebo_package',
+                    executable='driving_model_node.py',
+                    name='driving_model',
+                    output='screen',
+                    parameters=[{'auto_drive': False}],
+                    condition=IfCondition(enable_driving_model),
+                ),
                 #Node(
                 #    package='my_gazebo_package',
                 #    executable='random_drive_node.py',

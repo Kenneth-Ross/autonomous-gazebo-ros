@@ -17,7 +17,7 @@
   <depend>nav2_bt_navigator</depend>
   <depend>nav2_waypoint_follower</depend>
   <depend>nav2_lifecycle_manager</depend>
-  <depend>nav2_recoveries</depend>
+  <depend>nav2_behaviors</depend>
   <depend>nav2_smac_planner</depend>
   <depend>nav2_regulated_pure_pursuit_controller</depend>
 
@@ -25,6 +25,7 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-yaml</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

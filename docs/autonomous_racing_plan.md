@@ -1,442 +1,464 @@
-# [W.I.P] Autonomous Racing System — Implementation Plan
+# [W.I.P] Autonomous Racing Pathing
 
-> **Design/implementation plan:** Phase labels do not establish verification. See [VALIDATION.md](VALIDATION.md).
+Host implementation note: canonical `autonomous_racing_msgs` interfaces are shared by `edge_stack` and `server_sim` through one source package plus a server workspace symlink. Production launches now use the C++ cone-map adapter, midpoint planner, pure-pursuit controller, and independent safety supervisor; typed prepare/start/abort services, control candidates, supervisor status, and recorder heartbeats replace prototype JSONL contracts. Host orchestration explicitly calls supervisor prepare, recorder prepare, recorder start after a healthy heartbeat, supervisor start, then paired aborts; the supervisor does not make nested recorder RPCs. The server `run_recorder_node.py` coordinates an explicit rosbag2 MCAP allowlist with atomic manifest/summary artifacts and heartbeat. Host builds and regressions pass; Orange Pi Gate A evidence remains pending.
 
-> Based on in-depth design interview (2026-07-03)
+## Objective
 
-## Architecture Overview
+The Orange Pi shall drive the simulated vehicle around an initially unknown,
+static cone track using only simulated sensor data processed through the production
+perception, localization, mapping, planning, and control path.
+
+Lap one prioritizes map quality while driving at an adaptive speed no greater than
+2 m/s. After closing the loop, the vehicle transitions without stopping to a
+confidence-aware global centerline with an initial 5 m/s ceiling. Later observations
+may correct the path ahead of the vehicle without causing a discontinuous control
+target.
+
+The first accepted pathing milestone is one safe, perception-driven lap. Later-lap
+speed and correction acceptance is a separate gate. Physical-car validation,
+racing-line optimization, self-intersecting tracks, dynamic obstacles, and general
+Nav2 navigation are outside this project.
+
+## Deployment boundary
+
+- Gazebo, vehicle dynamics, track generation, evaluation-only ground truth, and
+  authoritative MCAP recording run on the simulation server.
+- NPU perception, RTAB-Map, path planning, confidence evaluation, pure pursuit,
+  and the safety supervisor run on the Orange Pi.
+- Production decisions use perceived data only. Ground truth must not be visible
+  to mapping, planning, confidence, speed selection, or control nodes.
+- The server records Orange Pi topics through ROS 2/DDS over the configured
+  network or Tailscale path.
+- Every run starts with an empty run-local cone map and path. Maps and paths are
+  not reused after restart.
+
+## Operating assumptions
+
+- V1 supports static, simple closed cone loops, including bends and hairpins but
+  excluding self-intersections such as figure-eight tracks.
+- The initial localized vehicle pose defines the start/finish gate; initial heading
+  defines travel direction.
+- Cones have no reliable left/right or color class. Boundary inference uses
+  geometry and temporal continuity.
+- The vehicle travels forward. Obstacle avoidance is out of scope.
+- Simulation ground truth is permitted only in the validator, scoring, MCAP, and
+  offline confidence-calibration tools.
+
+## Runtime architecture
 
 ```mermaid
-flowchart TD
-    subgraph "Gazebo Sim (Host)"
-        GZ["Gazebo Harmonic"]
-        TrackGen["track_generator_node"]
-        CarSpawn["Car Spawner (URDF)"]
-        GTCones["/ground_truth/cones"]
-        GTTF["/ground_truth/tf"]
-    end
-
-    subgraph "autonomous_racing (New Package)"
-        subgraph "Phase 1: Exploration (Lap 1)"
-            ReactMid["reactive_midline_node"]
-            PP1["Pure Pursuit Controller"]
-        end
-        
-        subgraph "Phase 2: Racing (Lap 2+)"
-            MapExtract["map_path_extractor"]
-            PrePath["Pre-computed nav_msgs/Path"]
-            PP2["Pure Pursuit Controller"]
-        end
-
-        subgraph "Validation & Telemetry"
-            Validator["race_validator_node"]
-            Telemetry["telemetry_recorder_node"]
-            Orchestrator["test_orchestrator_node"]
-        end
-    end
-    
-    subgraph "Vision Pipeline (End-to-End)"
-        Camera["Gazebo RGBD Camera"]
-        YOLO["YOLO Cone Detector"]
-        Proj3D["3D Cone Projection"]
-        SLAM["RTAB-Map"]
-    end
-
-    subgraph "Control"
-        DrivingModel["driving_model_node"]
-        CmdVel["/cmd_vel"]
-    end
-
-    GZ --> Camera
-    Camera --> YOLO --> Proj3D --> SLAM
-    SLAM -->|"Detected Cones"| ReactMid
-    SLAM -->|"Full Map"| MapExtract
-    ReactMid -->|"Local Midline Path"| PP1
-    MapExtract -->|"Full Track Path"| PrePath --> PP2
-    PP1 -->|"/car/control_request"| DrivingModel
-    PP2 -->|"/car/control_request"| DrivingModel
-    DrivingModel --> CmdVel --> GZ
-
-    GTTF -->|"Ground Truth Pose"| Validator
-    GTCones -->|"Ground Truth Cones"| Validator
-    Validator -->|"Failure Events"| Telemetry
-    Validator -->|"Lap Progress"| Orchestrator
-    Telemetry -->|".jsonl files"| Orchestrator
-    Orchestrator -->|"Reset / Param Changes"| GZ
+flowchart LR
+  SIM["Gazebo sensors"] --> STREAM["RGB-D transport"]
+  STREAM --> DET["RKNN cone detector"]
+  DET --> LAND["cone evidence + RTAB-Map landmarks"]
+  LAND --> ADAPT["corrected cone-map adapter"]
+  ADAPT --> PLAN["confidence-aware midpoint planner"]
+  PLAN --> CTRL["enhanced pure pursuit"]
+  CTRL --> CAND["control candidate"]
+  SUP["independent safety supervisor + gate"] --> CMD["/car/control_request"]
+  CAND --> SUP
+  PLAN --> SUP
+  REC["server MCAP recorder heartbeat"] --> SUP
+  CMD --> SIM
+  SIM -. "ground truth, evaluation only" .-> VAL["server validator"]
 ```
 
----
+The production pathing core is C++. The planner and controller may use one
+composition container, but the supervisor and command gate run in a separate
+process. Python remains appropriate for MCAP analysis and development utilities.
 
-## Design Decisions Summary
+The supervisor is the only authority that enables motion. The planner and
+controller may propose paths and commands, but neither publishes directly to the
+vehicle command topic. The existing vehicle/ECU watchdog remains the final
+independent stop layer.
 
-| Decision | Choice |
-|---|---|
-| **Pathing Strategy** | Multi-lap progressive: reactive midline (Lap 1) → pre-computed path (Lap 2+) |
-| **Perception Source** | Full vision pipeline (YOLO → 3D projection → RTAB-Map) |
-| **Path Following** | Pure Pursuit controller |
-| **Optimal Path** | Simple midline (average of inner/outer cone pairs) |
-| **Failure Detection** | Track departure + timeout/stall |
-| **Telemetry Format** | JSON Lines (.jsonl) per timestep |
-| **Telemetry Scope** | All: pose log, control log, cone proximity, failure summary, run metadata |
-| **Spawn Strategy** | Track defines spawn point (x, y, heading on centerline) |
-| **Lap Detection** | Track-progress based (closest point on centerline > 95%) |
-| **Reset Mechanism** | Gazebo world reset + re-spawn |
-| **Validator Loop** | Agentic: agent reads logs → adjusts params → triggers re-run |
-| **Speed** | Parameterized (launch parameter) |
-| **Package** | New `autonomous_racing` package |
+## Shared ROS interfaces
 
----
+Create one canonical `autonomous_racing_msgs` package and expose that same package
+to both `edge_stack` and `server_sim`; do not duplicate message definitions.
 
-## New Package: `autonomous_racing`
+### Cone map
 
-### Package Structure
-```
-server_sim/src/autonomous_racing/
-├── CMakeLists.txt
-├── package.xml
-├── setup.py                          # If ament_python
-├── autonomous_racing/
-│   ├── __init__.py
-│   ├── nodes/
-│   │   ├── __init__.py
-│   │   ├── reactive_midline_node.py  # Phase 1: local midline from detected cones
-│   │   ├── pure_pursuit_node.py      # Path-following controller
-│   │   ├── race_validator_node.py    # Failure detection + lap tracking
-│   │   ├── telemetry_recorder_node.py# Logs all data to .jsonl
-│   │   └── test_orchestrator_node.py # Manages run lifecycle + agent API
-│   ├── path_planning/
-│   │   ├── __init__.py
-│   │   ├── midline.py                # Midline computation from cone pairs
-│   │   ├── cone_matching.py          # Match inner/outer cone pairs
-│   │   └── progress_tracker.py       # Track-progress based lap detection
-│   └── utils/
-│       ├── __init__.py
-│       └── telemetry_format.py       # JSONL serialization helpers
-├── config/
-│   ├── racing_params.yaml            # Tunable parameters
-│   └── tuning_config.json            # Agent-readable config for tuning
-├── launch/
-│   └── autonomous_race.launch.py     # Full autonomous racing launch
-└── telemetry/                        # Output directory for logs
-    └── .gitkeep
-```
+`ConeEstimate` contains:
 
----
+- stable run-local ID;
+- `map`-frame pose and covariance;
+- detector score;
+- observation count and distinct-view count;
+- last-observed stamp;
+- depth/pose quality;
+- association confidence;
+- state: `PROVISIONAL`, `PERSISTENT`, or `QUARANTINED`.
 
-## Node Specifications
+`ConeMap` contains a header, map revision, localization confidence, and cone
+estimates. The adapter produces this normalized contract from provisional
+perception evidence and RTAB-Map-corrected persistent landmarks.
 
-### 1. `reactive_midline_node` — Exploration Phase Path Planner
+The Orange Pi implementation must first inspect its installed RTAB-Map interfaces
+and prove how optimized landmark IDs and poses are recovered. The server checkout
+does not have `rtabmap_msgs` installed. If no direct corrected landmark topic
+preserves IDs, the adapter shall associate RTAB-Map's optimized landmark poses
+with run-local persistent IDs and reject ambiguous associations rather than use
+the cone processor's frozen map positions.
 
-**Purpose:** During Lap 1 (exploration), compute a local midline path from the cones currently visible to the car.
+### Racing path
 
-**Subscriptions:**
-| Topic | Type | Description |
-|---|---|---|
-| `/rtabmap/landmarks` | `visualization_msgs/MarkerArray` | Detected cone positions from SLAM |
-| `/odom` | `nav_msgs/Odometry` | Current car pose for local frame |
+`RacingPathPoint` contains:
 
-**Publications:**
-| Topic | Type | Description |
-|---|---|---|
-| `/racing/local_path` | `nav_msgs/Path` | Local midline path (10-20 waypoints ahead) |
-| `/racing/phase` | `std_msgs/String` | Current phase: "exploring" or "racing" |
+- `map`-frame pose;
+- target speed;
+- aggregate confidence in `[0, 1]`;
+- observation-support, pose-quality, corridor-geometry, continuity, and recency
+  confidence components;
+- state: `TRUSTED`, `DEGRADED`, or `UNSAFE`.
 
-**Algorithm:**
-1. Collect detected cones within a forward-facing sector (±60°, 15m range)
-2. Cluster cones into left/right groups using cross-track sign relative to heading
-3. Sort each group by distance along heading direction
-4. Compute midpoints between paired left/right cones
-5. Fit a smooth path through midpoints
-6. Publish as `nav_msgs/Path`
+`RacingPath` contains:
 
-> [!IMPORTANT]
-> When cone density is sparse (early in lap), fall back to heading-biased steering to prevent stalling.
+- header in `map`;
+- monotonically increasing revision;
+- mode: `ROLLING` or `GLOBAL`;
+- closed-loop flag;
+- ordered `RacingPathPoint` values.
 
----
+The controller consumes `RacingPath`. Derived `nav_msgs/Path` and visualization
+markers are for inspection only and are not control inputs.
 
-### 2. `pure_pursuit_node` — Path-Following Controller
+### Supervisor and recording
 
-**Purpose:** Geometric path tracker that computes steering commands to follow a given path.
+Typed status interfaces carry:
 
-**Subscriptions:**
-| Topic | Type | Description |
-|---|---|---|
-| `/racing/local_path` or `/racing/global_path` | `nav_msgs/Path` | Target path to follow |
-| `/odom` | `nav_msgs/Odometry` | Current car pose + velocity |
+- supervisor state and latched-stop reason;
+- planner/controller readiness and heartbeat;
+- active and candidate path revisions;
+- path-revision acceptance or rejection reason;
+- recorder state, run ID, and heartbeat.
 
-**Publications:**
-| Topic | Type | Description |
-|---|---|---|
-| `/car/control_request` | `geometry_msgs/TwistStamped` | Velocity + steering commands to driving model |
+Use explicit prepare, start, and abort operations. Host orchestration calls
+supervisor `/racing/prepare`, recorder `/racing/recorder/prepare`, verifies a
+healthy heartbeat, calls `/racing/recorder/start`, then calls supervisor
+`/racing/start`:
 
-**Parameters:**
-| Parameter | Default | Description |
-|---|---|---|
-| `lookahead_distance` | 3.0 | Base lookahead distance [m] |
-| `lookahead_gain` | 0.5 | Speed-proportional lookahead gain |
-| `target_speed` | 2.0 | Target linear velocity [m/s] |
-| `min_lookahead` | 1.5 | Minimum lookahead distance [m] |
-| `max_lookahead` | 8.0 | Maximum lookahead distance [m] |
-| `wheelbase` | 1.0 | Vehicle wheelbase [m] (from URDF) |
+1. `prepare` creates a run ID and resets run-local state; fresh recorder heartbeat
+   is required before motion can start.
+2. `start` is an explicit operator command that opens the gate only when the
+   recorder heartbeat is fresh.
+3. `abort` immediately closes the gate, publishes zero, marks the run aborted,
+   and remains latched until a new prepare operation; recorder abort finalizes
+   the MCAP summary.
 
-**Algorithm:**
-```
-lookahead = max(min_lookahead, min(max_lookahead, lookahead_distance + lookahead_gain * velocity))
-goal_point = find_point_on_path_at_distance(lookahead, current_pose)
-alpha = atan2(goal_point.y - car.y, goal_point.x - car.x) - car.yaw
-steering = atan2(2 * wheelbase * sin(alpha), lookahead)
+This is a clean interface break. Remove the prototype racing topic contract and
+update all consumers together.
+
+## Supervisor state and safety contract
+
+The supervisor state machine is:
+
+```text
+IDLE -> PREPARING -> READY -> EXPLORING -> RACING
+                       |          |           |
+                       +------> STOPPING <----+
+                                  |
+                      COMPLETE / FAILED / ABORTED
 ```
 
----
+- Motion cannot begin before explicit operator `start`.
+- The command gate publishes at 50 Hz.
+- The controller publishes `/racing/control_candidate`; only the gate publishes
+  `/car/control_request`.
+- Any critical failure closes the gate, commands zero speed, records the reason,
+  and latches the run.
+- Default freshness limits are 200 ms for odometry, active path, and controller
+  command; 500 ms for perception and server-recorder heartbeat. All are parameters
+  with lower bounds enforced by validation.
+- Recorder/network loss is a hard interlock. The Orange Pi performs the stop; it
+  never depends on the server delivering a final zero command.
+- Automatic recovery must not reopen the gate. A new run is required.
 
-### 3. `race_validator_node` — Failure Detection + Lap Tracking
+## Cone evidence and confidence
 
-**Purpose:** Monitors the race for failure conditions and tracks lap progress.
+Runtime confidence is computed exclusively from onboard evidence. Simulation
+ground truth evaluates calibration after the fact.
 
-**Subscriptions:**
-| Topic | Type | Description |
-|---|---|---|
-| `/ground_truth/tf` | `tf2_msgs/TFMessage` | Ground truth car pose |
-| `/ground_truth/cones` | `visualization_msgs/MarkerArray` | Ground truth cone positions |
-| `/odom` | `nav_msgs/Odometry` | Estimated car pose |
-| `/cmd_vel` | `geometry_msgs/Twist` | Current control output |
+Persistent RTAB-Map-corrected cones are authoritative anchors. Provisional cones
+may support the rolling planner with reduced weight when they agree with corridor
+geometry. A conflicting observation is quarantined, excluded from control, and
+admitted only after repeated consistent observations from distinct vehicle poses.
 
-**Publications:**
-| Topic | Type | Description |
-|---|---|---|
-| `/racing/failure` | `std_msgs/String` | Failure event (JSON) |
-| `/racing/lap_progress` | `std_msgs/Float32` | 0.0 → 1.0 progress around track |
-| `/racing/lap_complete` | `std_msgs/Int32` | Lap counter |
-| `/racing/run_status` | `std_msgs/String` | "running", "failed", "completed" |
+Default path confidence weights are:
 
-**Failure Conditions:**
+| Component | Weight |
+|---|---:|
+| Observation support and view diversity | 0.30 |
+| Pose/depth uncertainty | 0.25 |
+| Corridor geometry and two-sided support | 0.25 |
+| Path and boundary continuity | 0.10 |
+| Recency | 0.10 |
 
-| Condition | Detection Method | Threshold |
-|---|---|---|
-| **Track departure** | Check if GT car pose is outside the convex hull of outer cones or inside inner cones | Distance to nearest boundary < 0 (crossed) |
-| **Timeout/stall** | Track progress along centerline; if no forward progress for N seconds | `stall_timeout: 10.0` seconds |
+Localization confidence caps the aggregate result. Long gaps, one-sided support,
+ambiguous associations, implausible width, boundary crossing, and abrupt curvature
+reduce confidence. Hard clearance or vehicle-feasibility failures make a section
+`UNSAFE` regardless of its numeric score.
 
-**Lap Detection:**
-- Pre-compute centerline from ground truth cones at startup
-- At each GT pose update, find closest point on centerline → track progress (0.0 to 1.0)
-- Lap complete when progress wraps past 0.95 → 0.05 transition
+Default section thresholds are:
 
----
+- `TRUSTED`: confidence at least 0.75;
+- `DEGRADED`: confidence at least 0.40 and below 0.75;
+- `UNSAFE`: confidence below 0.40 or any hard invariant failure.
 
-### 4. `telemetry_recorder_node` — Data Logger
+Weights and thresholds are parameters, but acceptance uses the defaults until
+retained MCAP evidence justifies a documented change.
 
-**Purpose:** Records all telemetry data to JSONL files for post-mortem analysis.
+## Path construction
 
-**Output Directory:** `telemetry/run_YYYYMMDD_HHMMSS/`
+### Rolling exploration path
 
-**Files produced per run:**
+1. Select fresh forward cones within the perception horizon.
+2. Construct short, plausible cone-to-cone connections using distance, heading,
+   learned track width, temporal continuity, and confidence.
+3. Use connection midpoints as center candidates.
+4. Select the forward-continuous midpoint route consistent with the initial travel
+   direction and current progress.
+5. Fit a constrained spline inside the inferred corridor.
+6. Publish a rolling `map`-frame path with confidence and speed at every point.
 
-| File | Content | Rate |
-|---|---|---|
-| `pose_log.jsonl` | `{t, x, y, yaw, vx, vy, steering, lateral_error}` | 20 Hz |
-| `control_log.jsonl` | `{t, cmd_vx, cmd_wz, target_vx, actual_vx, throttle, brake}` | 20 Hz |
-| `cone_proximity.jsonl` | `{t, nearest_cone_id, nearest_cone_dist, nearest_cone_side}` | 10 Hz |
-| `run_summary.json` | Failure event, duration, laps, track, params, spawn pose | End of run |
-| `run_config.json` | Full parameter dump at run start | Start of run |
+The planner must not invent an unconditional straight path when no cones are
+usable. Insufficient safe geometry produces an unsafe status and a stop.
 
-**JSONL Pose Log Example:**
-```json
-{"t": 1234567890.123, "x": 5.2, "y": 3.1, "yaw": 0.45, "vx": 2.1, "vy": 0.01, "steering": 0.12, "lateral_error": 0.35}
+### Closed global path
+
+During lap one, the planner accumulates corrected cones and constructs a global
+midpoint graph. A closed-path candidate must satisfy:
+
+- continuous topology from and back to the start gate;
+- no self-intersection for V1;
+- plausible, consistently ordered corridor geometry;
+- vehicle clearance from both inferred boundaries;
+- curvature and steering feasibility;
+- continuous heading and curvature at closure;
+- confidence classification for every section.
+
+The selected centerline is a periodic constrained spline. It optimizes safety,
+clearance, and smoothness, not lap time.
+
+If the first gate crossing occurs before a closed candidate exists, the vehicle
+continues another exploration lap at no more than 2 m/s. Once a global path passes
+validation, the supervisor transitions seamlessly to racing mode.
+
+## Later-lap correction and speed
+
+Exploration speed is adaptive and capped at 2 m/s. Racing speed is computed from
+curvature, clearance, localization confidence, and path confidence, with an
+initial ceiling of 5 m/s.
+
+- Trusted sections may use the racing profile.
+- Degraded sections slow to exploration speed and request a bounded RTAB-Map
+  mapping window.
+- Outside correction windows, RTAB-Map operates in localization mode to reserve
+  compute for faster control and perception.
+- Unsafe or missing global sections may use a newly validated rolling path at
+  exploration speed. If no safe rolling path exists, the supervisor stops.
+
+RTAB-Map mapping/localization mode changes must be tested on the Orange Pi to prove
+that the current map and landmark identities survive the transition.
+
+### Live path revision
+
+A new corrected path is a candidate until it:
+
+1. passes topology, clearance, curvature, steering, and confidence invariants;
+2. remains continuous with the committed control horizon;
+3. materially improves confidence, clearance, or consistency in the affected
+   forward region.
+
+The active path immediately around the vehicle remains committed. The planner
+preserves at least the larger of the current lookahead or 0.5 seconds of travel,
+then blends toward the candidate over at least the larger of twice the lookahead
+or 1.0 second of travel. Any candidate that cannot meet the blend constraints is
+rejected.
+
+Default material-improvement thresholds are 0.05 aggregate confidence or 0.10 m
+minimum-clearance improvement without causing another section to regress to
+unsafe. Insignificant revisions are ignored to prevent path churn.
+
+## Controller
+
+Retain pure pursuit as the V1 controller and rewrite its production core in C++.
+
+- Use the actual 1.511 m wheelbase and configured steering/velocity limits.
+- Consume only the typed active racing path in `map`.
+- Resolve timestamped `map -> base_link` transforms; do not support mixed path
+  frame semantics.
+- Run at 50 Hz.
+- Use each path point's target speed rather than a node-wide constant.
+- Apply curvature/confidence speed regulation and steering continuity limits.
+- Publish candidate commands only.
+- Missing, stale, unsafe, or untransformable paths produce a zero candidate and a
+  fault status.
+
+## MCAP-first run artifacts
+
+The simulation server runs a coordinator around rosbag2 using the MCAP storage
+backend. It must not implement a custom MCAP writer.
+
+Each run produces:
+
+```text
+telemetry/run_<UTC>_<run_id>/
+├── bag/                  # metadata.yaml and one or more *.mcap segments
+├── run_manifest.json
+└── run_summary.json
 ```
 
-**Run Summary Example:**
-```json
-{
-  "run_id": "run_20260703_191500",
-  "track_name": "random",
-  "track_seed": 42,
-  "spawn_pose": {"x": 0.0, "y": 22.5, "yaw": 1.57},
-  "result": "failed",
-  "failure_type": "track_departure",
-  "failure_time": 45.3,
-  "failure_pose": {"x": 12.1, "y": -8.3, "yaw": 2.1},
-  "failure_velocity": 3.2,
-  "laps_completed": 0,
-  "lap_progress_at_failure": 0.67,
-  "duration_seconds": 45.3,
-  "parameters": {
-    "target_speed": 2.0,
-    "lookahead_distance": 3.0,
-    "kp_vel": 1.2,
-    "ki_vel": 0.1,
-    "kd_vel": 0.05
-  }
-}
-```
+The manifest is written before motion and includes run ID, UTC start, revisions,
+dirty-worktree state, launch arguments, parameters, track/seed, topic contract,
+host/edge identities, and recording limits. The summary is written atomically
+after stop and includes the terminal state, lap results, faults, path/control
+metrics, confidence calibration, bag integrity, and artifact paths.
 
----
+Recording is ready before the supervisor opens the motion gate. The recorder
+publishes a 10 Hz heartbeat; loss for 500 ms latches a stop.
 
-### 5. `test_orchestrator_node` — Run Lifecycle Manager
+Every run records an explicit allowlist containing:
 
-**Purpose:** Manages the full test lifecycle and provides the API for agentic tuning.
+- `/clock`, `/tf`, and `/tf_static`;
+- odometry, localization, RTAB-Map graph/landmark outputs, and diagnostics;
+- raw cone evidence and normalized cone maps;
+- active, candidate, accepted, and rejected path revisions;
+- confidence components, section states, speed profiles, and blend regions;
+- supervisor states, readiness, faults, candidate commands, and final commands;
+- validator outputs and evaluation-only ground truth;
+- compressed RGB, camera calibration, and YOLO annotations.
 
-**Responsibilities:**
-1. Initialize a run (set track, spawn car, start recording)
-2. Monitor validator for failure/completion events
-3. On failure/completion: stop recording, save telemetry, reset sim
-4. Expose a service for the agent to trigger new runs with updated params
+Required topics must contain data across the driven interval. An empty required
+topic makes the run invalid. Normal completion, failure, abort, timeout, recorder
+death, and storage-limit termination must leave either a valid bag or an explicitly
+incomplete recoverable artifact.
 
-**Services:**
-| Service | Type | Description |
-|---|---|---|
-| `/orchestrator/start_run` | Custom `.srv` | Start a new run with specified params |
-| `/orchestrator/get_results` | Custom `.srv` | Get last run's summary JSON |
-| `/orchestrator/update_params` | Custom `.srv` | Update tunable parameters |
+Remove the JSONL time-series recorder and its launch/configuration paths in the
+first implementation slice. JSON remains only for the manifest and summary.
 
-**Parameters:**
-| Parameter | Default | Description |
-|---|---|---|
-| `max_laps` | 3 | Max laps per run before declaring success |
-| `stall_timeout` | 10.0 | Seconds of no progress = stall |
-| `telemetry_dir` | `./telemetry` | Output directory |
+## Foxglove review contract
 
----
+Add `/racing/.*` to the Foxglove bridge whitelist.
 
-## Track Spawn Point Changes
+- Publish the active path as a prominent continuous line strip with per-point
+  red-to-yellow-to-green colors for unsafe-to-trusted confidence.
+- Show the corrected candidate as a thinner translucent line.
+- Mark unsafe gaps, state transitions, and blend boundaries explicitly.
+- Show the most recently rejected candidate temporarily with the failed region and
+  rejection reason.
+- Publish section diagnostics containing aggregate confidence and observation,
+  uncertainty, geometry, continuity, recency, localization, revision, and speed
+  components.
+- Record all visualization and diagnostic topics in MCAP so post-run Foxglove
+  replay matches the live display.
 
-### Modifications to [track_layouts.py](../server_sim/src/my_gazebo_package/my_gazebo_package_py/track_layouts.py)
+## Implementation sequence
 
-Each track layout gains a `spawn` field:
+All implementation follows test-driven development: add a failing behavioral or
+interface test, implement the minimum passing change, then refactor with tests
+green.
 
-```python
-TRACK_LAYOUTS = {
-    "oval": {
-        "points": [
-            (0.0, 5.0), (1.0, 4.9), ...
-        ],
-        "spawn": {"x": 0.0, "y": 5.0, "yaw": 1.5708}  # Top of oval, facing right
-    },
-    ...
-}
-```
+1. Add the shared message/service package and clean-break topic contract.
+2. Delete JSONL telemetry and implement server MCAP lifecycle, manifests,
+   summaries, content checks, and heartbeat.
+3. Implement the independent C++ supervisor and command gate with simulated
+   readiness/fault sources.
+4. Expose normalized cone evidence and prove corrected landmark extraction on the
+   Orange Pi.
+5. Implement midpoint graph selection, confidence, constrained rolling spline, and
+   unsafe-gap behavior.
+6. Implement the C++ pure-pursuit controller and confidence/curvature speed
+   regulation.
+7. Implement global closure, start-gate lap logic, localization/targeted-mapping
+   modes, candidate validation, and forward blending.
+8. Add Foxglove confidence visualization and MCAP replay diagnostics.
+9. Execute deterministic, fixed-track, unseen-track, later-lap, and adversarial
+   gates with retained evidence.
 
-### Modifications to [track_builder.py](../server_sim/src/my_gazebo_package/my_gazebo_package_py/track_builder.py)
+## Automated verification
 
-`generate_random_track()` returns a spawn point computed from the first path segment:
+### Unit and component coverage
 
-```python
-def generate_random_track(...):
-    ...
-    # Compute spawn: midpoint of first segment, heading along it
-    p0 = np.array(points[0])
-    p1 = np.array(points[1])
-    mid = (inner_cones[0] + outer_cones[0]) / 2  # Midpoint at start
-    heading = np.arctan2(p1[1] - p0[1], p1[0] - p0[0])
-    spawn = {"x": float(mid[0]), "y": float(mid[1]), "yaw": float(heading)}
-    return inner_cones, outer_cones, spawn
-```
+- Cone weighting, distinct-view support, quarantine, re-observation, and ambiguous
+  association rejection.
+- Midpoint graph behavior with unequal sides, missed cones, false cones, long
+  gaps, hairpins, and no usable geometry.
+- Spline closure, corridor containment, curvature, clearance, and steering limits.
+- Confidence composition, hard unsafe overrides, thresholds, and speed profiles.
+- Candidate material-improvement tests, committed horizon, forward blending, and
+  rejection without active-path mutation.
+- Start-gate direction, minimum-progress protection, false recrossings, and lap
+  completion.
+- Pure-pursuit geometry, actual wheelbase/limits, transform failures, staleness,
+  and 50 Hz command behavior.
+- Supervisor transitions, exclusive command ownership, explicit start, abort,
+  every timeout, latched stop, and inability to auto-resume.
+- MCAP readiness, topic content, run-ID consistency, finalization, incomplete
+  recovery, replay clock, and transient-local `/tf_static`.
+- Foxglove per-point color ramp, active/candidate distinction, unsafe markers, and
+  rejected-candidate expiry.
 
-### Modifications to [gazebo.launch.py](../server_sim/src/my_gazebo_package/launch/gazebo.launch.py)
+### Integration and adversarial coverage
 
-The car spawn position uses the track's spawn point (communicated via a param or the orchestrator).
+Mandatory fault cases are:
 
----
+- stale perception;
+- stale odometry or transform;
+- stale or unsafe path;
+- false cone quarantined without path capture;
+- missing cone section recovered by a rolling path;
+- missing section with no safe fallback causing a latched stop;
+- loop-closure path shift accepted through a bounded forward blend;
+- unsafe or insignificant correction rejected;
+- server recorder or DDS/Tailscale heartbeat loss;
+- RTAB-Map mapping/localization transition without map or ID loss.
 
-## Agentic Tuning Workflow
+Critical odometry/path/control faults must close the gate within 200 ms. Perception
+and recorder faults must close it within 500 ms. No test may rely on a command from
+the server to perform the stop.
 
-```mermaid
-sequenceDiagram
-    participant Agent as AI Agent (Codex)
-    participant Orch as test_orchestrator
-    participant Sim as Gazebo Sim
-    participant Tel as telemetry_recorder
-    participant Logs as telemetry/*.jsonl
+## Acceptance gates
 
-    Agent->>Orch: start_run(track="random", speed=2.0, lookahead=3.0)
-    Orch->>Sim: Spawn track + reset car to spawn pose
-    Orch->>Tel: Start recording
-    
-    loop Race Running
-        Sim-->>Orch: /racing/run_status = "running"
-        Sim-->>Tel: Pose, control, cone data at 20Hz
-    end
-    
-    Sim-->>Orch: /racing/failure (track_departure)
-    Orch->>Tel: Stop recording
-    Tel->>Logs: Write pose_log.jsonl, control_log.jsonl, run_summary.json
-    
-    Agent->>Logs: Read run_summary.json
-    Agent->>Logs: Read pose_log.jsonl (analyze lateral_error trend)
-    Agent->>Agent: "Lateral error spikes at t=30s, speed was 2.0, lookahead=3.0. Try lookahead=4.5"
-    
-    Agent->>Orch: start_run(track="random_seed_42", speed=2.0, lookahead=4.5)
-    Note over Agent,Logs: Repeat until success or parameter convergence
-```
+### Gate A: first safe lap
 
-### Agent Interface (Shell Commands)
+Run the complete production data path with planning and control on the Orange Pi:
 
-The agent interacts via standard CLI:
+1. pass all automated tests;
+2. complete one lap on a fixed simple closed track at an adaptive speed no greater
+   than 2 m/s;
+3. repeat on an unseen seeded random simple closed track;
+4. show no boundary crossing, cone collision, unsafe command, critical-input
+   timeout, or ground-truth subscription in a production node;
+5. retain complete server MCAP artifacts and a reviewable Foxglove confidence
+   display for both runs.
 
-```bash
-# Start a run
-ros2 service call /orchestrator/start_run autonomous_racing/srv/StartRun \
-  "{track_name: 'random', random_seed: 42, target_speed: 2.0, lookahead: 3.0}"
+Passing Gate A advances the project to global-path and later-lap verification; it
+does not by itself accept 5 m/s racing.
 
-# Check status
-ros2 topic echo /racing/run_status --once
+### Gate B: global path and correction
 
-# Read results after failure
-cat telemetry/run_latest/run_summary.json | python3 -m json.tool
+In one continuous run:
 
-# Analyze lateral error
-python3 -c "
-import json
-errors = [json.loads(l)['lateral_error'] for l in open('telemetry/run_latest/pose_log.jsonl')]
-print(f'Max lateral error: {max(errors):.2f}m at sample {errors.index(max(errors))}')
-"
+1. complete exploration and transition without stopping to a validated closed
+   global path;
+2. complete a later lap with a 5 m/s ceiling and curvature/confidence regulation;
+3. slow and remap a degraded section;
+4. blend one safe material correction without a steering discontinuity;
+5. reject one unsafe correction without changing the active path;
+6. retain nominal and adversarial MCAP evidence.
 
-# Update params and re-run
-ros2 service call /orchestrator/start_run autonomous_racing/srv/StartRun \
-  "{track_name: 'random', random_seed: 42, target_speed: 2.0, lookahead: 4.5}"
-```
+`[VERIFICATION]` requires all automated coverage plus retained Gate A and Gate B
+nominal/adversarial artifacts. `[COMPLETE]` requires every mandatory case above to
+pass on the Orange Pi against Gazebo.
 
----
+## Deferred work
 
-## Implementation Order
-
-### Phase 1: Foundation (Do First)
-1. [x] Create `autonomous_racing` package skeleton
-2. [x] Add spawn points to track layouts + track builder
-3. [x] Implement `pure_pursuit_node` (core controller)
-4. [x] Implement `race_validator_node` (failure detection + lap progress)
-5. [x] Implement `telemetry_recorder_node` (data logging)
-
-### Phase 2: Path Planning
-6. [x] Implement `reactive_midline_node` (exploration phase)
-7. [ ] Implement midline computation from full cone map (racing phase)
-8. [ ] Add phase transition logic (exploration → racing after lap 1)
-
-### Phase 3: Integration
-9. [x] Create `autonomous_race.launch.py`
-10. [x] Implement `test_orchestrator_node` (lifecycle + agent API)
-11. [ ] Modify car spawn to use track spawn points
-12. [ ] Wire up the full vision pipeline (camera → YOLO → SLAM → midline → Pure Pursuit → driving model)
-
-### Phase 4: Agentic Tuning
-13. [ ] Create analysis scripts for telemetry
-14. [x] Document the agent tuning workflow
-15. [ ] Test end-to-end: spawn → race → fail → log → analyze → re-tune → re-run
-
----
-
-## Key Tunable Parameters (Exposed to Agent)
-
-| Parameter | Range | Impact |
-|---|---|---|
-| `target_speed` | 1.0 - 13.0 m/s | Higher = faster but harder to steer |
-| `lookahead_distance` | 1.0 - 10.0 m | Higher = smoother but cuts corners |
-| `lookahead_gain` | 0.0 - 2.0 | Speed-proportional lookahead scaling |
-| `kp_vel` | 0.1 - 5.0 | Velocity PID proportional gain |
-| `ki_vel` | 0.0 - 1.0 | Velocity PID integral gain |
-| `kd_vel` | 0.0 - 0.5 | Velocity PID derivative gain |
-| `steering_slew_rate` | 0.5 - 5.0 rad/s | How fast steering can change |
-| `exploration_speed` | 1.0 - 3.0 m/s | Speed during mapping lap |
-| `cone_cluster_range` | 5.0 - 20.0 m | How far ahead to look for cones |
-
-> [!WARNING]
-> The current `parameters.yaml` caps `max_velocity` at 2.0 m/s, but the Ackermann plugin allows 13.41 m/s. These must be reconciled — the URDF/plugin limit should be the true ceiling, and `parameters.yaml` should reflect the desired operating range.
+- Physical-car deployment and validation.
+- Figure-eight and other self-intersecting topology.
+- Dynamic/static obstacle avoidance beyond cone-corridor stopping.
+- Time-optimal racing-line generation and speeds above the initial 5 m/s ceiling.
+- Persisted map/path reuse between runs.
+- General Nav2 goal navigation.
+- Comprehensive standalone perception-model acceptance; this project includes
+  only the evidence and failure behavior required by pathing.

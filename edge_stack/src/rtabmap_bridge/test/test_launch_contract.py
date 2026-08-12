@@ -48,6 +48,10 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "'sync_queue_size': 10" in launch
     assert "'wait_for_transform': 0.0" in launch
     assert "'queue_size': 2" not in launch
+    assert "'^/odometry/filtered$'" in launch
+    assert "'^/racing/.*'" in launch
+    assert "'^/car/control_request$'" not in launch
+    assert "'^/nav_cmd_vel$'" not in launch
     assert "'slam_rate_hz': float(cfg['slam_rate_hz'])" in launch
     assert "('rgb/image', '/edge/slam/rgb/image_raw')" in launch
     assert "('depth/image', '/edge/slam/depth/image_raw')" in launch
@@ -69,7 +73,7 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "self.promotion_metrics['candidates_created'] += 1" in landmark
     assert "self.promotion_metrics['promoted'] += 1" in landmark
     assert "DeclareLaunchArgument('landmark_candidate_max_range_m', default_value='20.0')" in launch
-    assert "while len(self.depth_frames) > 8" in landmark
+    assert "retain_bounded_frame(self.depth_frames" in landmark
     assert "self.depth_frames.pop(self.stamp_key(msg.header), None)" in landmark
     assert "'/edge/landmark_detections'" in landmark
     assert "namespace='rtabmap'" in launch

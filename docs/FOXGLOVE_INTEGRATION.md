@@ -2,6 +2,56 @@
 
 This document describes the Foxglove bridge instantiated by `rtabmap_slam.launch.py`. It is implementation documentation, not proof that remote access or visualization has been tested; record those results in [VALIDATION.md](VALIDATION.md).
 
+## MCP-assisted review (investigation)
+
+[Foxglove Desktop's MCP server](https://docs.foxglove.dev/docs/ai/mcp-server) is a
+useful operator-review surface for retained runs. It is not an acceptance
+oracle and it must not become a robot-control path. The server is local to the
+desktop app (`http://127.0.0.1:7333/mcp`), requires a bearer token, and is not
+available from the Foxglove web app.
+
+Use MCP only with a retained server MCAP opened as a local recording. Do not
+open a live Foxglove WebSocket or an edge connection during the MCP validation
+gate. This keeps playback, seeking, and screenshots inside the review app and
+prevents an agent from being placed alongside live ROS traffic.
+
+### Allowed review surface
+
+- Read the current data-source/session state, topic list, schemas, and bounded
+  message samples.
+- Search recordings, sessions, or existing events by `run_id`, track, and time
+  range when the run has been imported into Foxglove.
+- Seek and replay the loaded MCAP, validate the review layout, and capture
+  screenshots of confidence paths, faults, and command-gate state.
+- Create an event only after a human has accepted the test verdict. Event IDs
+  and timestamps are review annotations, never pass evidence by themselves.
+
+The mandatory run is read-only. Do not use MCP to create, update, or delete
+layouts, user scripts, devices, Sites, or events during the gate. Foxglove
+documents that these writes execute without an additional Foxglove prompt, so
+the MCP token must be treated like a password and never committed or copied
+into a run log.
+
+### Safety and parity checks
+
+Reject the MCP review if any condition holds:
+
+1. The loaded source is live ROS/WebSocket data instead of the retained MCAP.
+2. The discovered tool catalog exposes a publish, service, teleoperation, or
+   other control surface for the run. The review client must be disconnected
+   and reconfigured before continuing.
+3. Foxglove's topic/schema summary disagrees with `run_manifest.json`,
+   `run_summary.json`, `ros2 bag info`, or the explicit MCAP allowlist.
+4. Required topics are empty, timestamps fall outside the manifest interval, or
+   `/racing/recorder/heartbeat` does not show the expected recorder lifecycle.
+5. MCP output is being used as a substitute for the deterministic planner,
+   controller, ECU, transport, or MCAP integrity probes.
+
+Capture the desktop-app version, MCP tool-catalog hash, source URI/run ID,
+selected layout, query time range, screenshot paths, and any approved event
+IDs in the run review artifact. Keep this artifact next to the MCAP; it does
+not change the pass/fail result produced by the automated probes.
+
 ## Active bridge
 
 The edge launch starts `foxglove_bridge` with:
@@ -16,12 +66,13 @@ The topic whitelist permits:
 
 - `/tf` and `/tf_static`;
 - `/map` and `/odometry/filtered`;
+- `/racing/*` diagnostics and candidate paths;
 - `/rtabmap/*`;
 - `/edge/camera/rgb/image_raw/compressed`;
 - `/edge/camera/depth/image_raw/compressed`;
 - `/yolo/*`.
 
-Raw RGB and depth image topics are intentionally absent. Changing this whitelist changes remote bandwidth and exposure and should be treated as an interface change.
+Raw RGB and depth image topics are intentionally absent. The final command topic `/car/control_request` and racing control services are also intentionally absent; the `/racing/*` entry is for diagnostics and candidate paths only. Changing this whitelist changes remote bandwidth and exposure and should be treated as an interface change.
 
 ## Current data flow
 

@@ -8,6 +8,8 @@
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
+  <depend>autonomous_racing_msgs</depend>
+  <depend>autonomous_racing_core</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>visualization_msgs</depend>

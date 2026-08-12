@@ -13,6 +13,14 @@ from collections import Counter, OrderedDict
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from tf2_ros import Buffer, TransformListener
 import tf2_geometry_msgs
+from rtabmap_bridge.perception_contract import (
+    association_threshold,
+    bounding_box_edges,
+    cone_geometry,
+    depth_percentile_meters,
+    project_pixel_to_camera,
+    retain_bounded_frame,
+)
 
 class ConeLandmarkProcessor(Node):
     def __init__(self):
@@ -75,11 +83,7 @@ class ConeLandmarkProcessor(Node):
         return (header.stamp.sec, header.stamp.nanosec)
 
     def depth_callback(self, msg):
-        key = self.stamp_key(msg.header)
-        self.depth_frames[key] = msg
-        self.depth_frames.move_to_end(key)
-        while len(self.depth_frames) > 8:
-            self.depth_frames.popitem(last=False)
+        retain_bounded_frame(self.depth_frames, self.stamp_key(msg.header), msg)
 
     def detection_callback(self, msg):
         depth_msg = self.depth_frames.pop(self.stamp_key(msg.header), None)
@@ -95,10 +99,7 @@ class ConeLandmarkProcessor(Node):
 
 
     def get_association_threshold(self, depth_m):
-        # Increased threshold to aggressively swallow the 1.14m average odometry drift
-        base_threshold = 2.5
-        depth_scaling = 0.05 * depth_m
-        return min(base_threshold + depth_scaling, 3.5)
+        return association_threshold(depth_m)
     def log_promotion_metrics(self):
         metrics = self.promotion_metrics
         self.get_logger().info(
@@ -182,10 +183,8 @@ class ConeLandmarkProcessor(Node):
             bbox_annotation.thickness = 3.0
             bbox_annotation.outline_color.g = 1.0
             bbox_annotation.outline_color.a = 1.0
-            left = float(u_center - size_x / 2.0)
-            top = float(v_center - size_y / 2.0)
-            right = float(u_center + size_x / 2.0)
-            bottom = float(v_center + size_y / 2.0)
+            left, top, right, bottom = bounding_box_edges(
+                u_center, v_center, size_x, size_y)
             bbox_annotation.points = [Point2(x=left, y=top), Point2(x=right, y=top),
                                       Point2(x=right, y=bottom), Point2(x=left, y=bottom)]
             annotations_msg.points.append(bbox_annotation)
@@ -200,14 +199,10 @@ class ConeLandmarkProcessor(Node):
             x_end = min(w, int(u_center + roi_w // 2 + 1))
             
             roi = depth_img[y_start:y_end, x_start:x_end]
-            valid_mask = (roi > 0) & (~np.isnan(roi))
-            if not np.any(valid_mask):
+            z_m = depth_percentile_meters(roi)
+            if z_m is None:
                 self.promotion_metrics['invalid_depth'] += 1
                 continue
-                
-            # 25th percentile depth (avoid background)
-            raw_z = np.percentile(roi[valid_mask], 25)
-            z_m = raw_z / 1000.0
             
             # Temporary logging to verify depth units (if raw_z is e.g. < 15, it's already in meters!)
             if hasattr(self, 'debug_count'):
@@ -224,25 +219,13 @@ class ConeLandmarkProcessor(Node):
                 continue
                 
             # Geometric Consistency Filter
-            phys_w = (size_x * z_m) / fx
-            phys_h = (size_y * z_m) / fy
-            
-            # TODO(Real-World Transition): These bounds are extremely loose (0.1m to 1.2m tall) 
-            # to accommodate the large 0.75m Gazebo simulation cones as well as YOLO slop.
-            # When deploying to the physical car with uniform FSE cones (~0.325m tall), 
-            # these bounds MUST be tightened (e.g. 0.15 < phys_h < 0.5) to aggressively 
-            # reject false positives like people or poles.
-            if not (0.05 < phys_w < 0.8 and 0.1 < phys_h < 1.2):
+            geometry = cone_geometry(size_x, size_y, z_m, fx, fy)
+            if geometry is None:
                 self.promotion_metrics['geometry_rejected'] += 1
                 continue
-                
-            if phys_w > phys_h * 1.5:
-                self.promotion_metrics['geometry_rejected'] += 1
-                continue
-            
-            x_c = ((u_center - cx) * z_m) / fx
-            y_c = ((v_center - cy) * z_m) / fy
-            z_c = z_m
+
+            x_c, y_c, z_c = project_pixel_to_camera(
+                u_center, v_center, z_m, fx, fy, cx, cy)
             
             if t_map is not None:
                 p = PointStamped()

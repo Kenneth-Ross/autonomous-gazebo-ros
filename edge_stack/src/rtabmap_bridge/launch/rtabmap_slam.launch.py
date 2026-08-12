@@ -61,7 +61,8 @@ def launch_setup(context):
         actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
             parameters=[{'port': 8765, 'address': '0.0.0.0',
             'service_whitelist': ['(?!)'], 'topic_whitelist': [
-                '^/tf$', '^/tf_static$', '^/map$', '^/rtabmap/.*',
+                '^/tf$', '^/tf_static$', '^/map$', '^/odometry/filtered$',
+                '^/rtabmap/.*', '^/racing/.*',
                 '^/edge/camera/.*/compressed$', '^/yolo/.*']}], output='screen'))
     if enabled['enable_npu']:
         actions.append(Node(package='rtabmap_bridge', executable='cone_detector_npu',

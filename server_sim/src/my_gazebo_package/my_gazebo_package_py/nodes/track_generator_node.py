@@ -13,7 +13,11 @@ from geometry_msgs.msg import Pose
 from visualization_msgs.msg import Marker, MarkerArray
 
 from my_gazebo_package.srv import ChangeTrack
-from my_gazebo_package_py.track_layouts import TRACK_LAYOUTS, CONE_MODEL_URI
+from my_gazebo_package_py.track_layouts import (
+    CONE_MODEL_URI,
+    DEFAULT_TRACK,
+    TRACK_LAYOUTS,
+)
 from my_gazebo_package_py.track_builder import generate_random_track, calculate_boundaries
 
 class TrackGenerator(Node):
@@ -24,7 +28,7 @@ class TrackGenerator(Node):
 
         self.callback_group = ReentrantCallbackGroup()
 
-        self.declare_parameter('initial_track', 'random')
+        self.declare_parameter('initial_track', DEFAULT_TRACK)
         self.initial_track = self.get_parameter('initial_track').get_parameter_value().string_value
 
         self.spawn_client = self.create_client(SpawnEntity, '/world/default/create', callback_group=self.callback_group)
@@ -228,7 +232,8 @@ def main(args=None):
         pass
     finally:
         track_generator.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

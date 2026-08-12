@@ -1,8 +1,10 @@
-import os
 from glob import glob
+import os
+
 from setuptools import find_packages, setup
 
 package_name = 'autonomous_racing'
+launch_files = glob(os.path.join('launch', '*launch.[pxy][yma]*'))
 
 setup(
     name=package_name,
@@ -12,7 +14,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
+        (os.path.join('share', package_name, 'launch'), launch_files),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,9 +29,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'command_gate_node = autonomous_racing.command_gate_node:main',
             'pure_pursuit_node = autonomous_racing.pure_pursuit_node:main',
             'race_validator_node = autonomous_racing.race_validator_node:main',
-            'telemetry_recorder_node = autonomous_racing.telemetry_recorder_node:main',
             'reactive_midline_node = autonomous_racing.reactive_midline_node:main',
             'test_orchestrator_node = autonomous_racing.test_orchestrator_node:main',
         ],

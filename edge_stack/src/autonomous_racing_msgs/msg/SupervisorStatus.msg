@@ -1,0 +1,21 @@
+uint8 IDLE=0
+uint8 PREPARING=1
+uint8 READY=2
+uint8 EXPLORING=3
+uint8 RACING=4
+uint8 STOPPING=5
+uint8 COMPLETE=6
+uint8 FAILED=7
+uint8 ABORTED=8
+
+std_msgs/Header header
+string run_id
+uint8 state
+string stop_reason
+bool planner_ready
+bool controller_ready
+bool recorder_ready
+uint64 active_path_revision
+uint64 candidate_path_revision
+uint64 accepted_path_revision
+string path_rejection_reason

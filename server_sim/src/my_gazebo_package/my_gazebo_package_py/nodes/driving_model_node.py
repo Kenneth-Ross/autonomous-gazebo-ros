@@ -1,10 +1,15 @@
 #!/usr/bin/python3
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist, TwistStamped
 from nav_msgs.msg import Odometry
-import math
+from my_gazebo_package_py.driving_model_control import (
+    apply_watchdog,
+    is_manual_override_active,
+    slew_steering,
+)
 
 class DrivingModelNode(Node):
     def __init__(self):
@@ -77,7 +82,7 @@ class DrivingModelNode(Node):
     def _is_manual_override_active(self):
         now = self.get_clock().now()
         age = (now - self.last_manual_time).nanoseconds / 1e9
-        return age < self.manual_override_timeout
+        return is_manual_override_active(age, self.manual_override_timeout)
 
     def control_request_cb(self, msg):
         if self._is_manual_override_active():
@@ -121,23 +126,26 @@ class DrivingModelNode(Node):
         # --- Watchdog & Failsafe ---
         cmd_age = (now - self.last_cmd_time).nanoseconds / 1e9
         # Watchdog applies even in auto_drive if comms are lost
-        if cmd_age > self.cmd_timeout:
+        watchdog = apply_watchdog(
+            cmd_age, self.cmd_timeout, self.throttle, self.brake,
+            self.target_vel, self.target_steering_input, self.vel_error_sum,
+        )
+        if watchdog.triggered:
             if self.throttle != 0.0 or self.brake != 1.0:
-                self.get_logger().warn(f'WATCHDOG TRIGGERED: No commands for {cmd_age:.2f}s. Emergency Braking.')
-            self.throttle = 0.0
-            self.brake = 1.0
-            self.target_steering_input = 0.0
-            self.target_vel = 0.0
-            self.vel_error_sum = 0.0 # CRITICAL: Reset integrator to prevent "kick" on reconnect
-        
+                self.get_logger().warn(
+                    f'WATCHDOG TRIGGERED: No commands for {cmd_age:.2f}s. '
+                    'Emergency Braking.')
+            self.throttle = watchdog.throttle
+            self.brake = watchdog.brake
+            self.target_steering_input = watchdog.target_steering
+            self.target_vel = watchdog.target_velocity
+            self.vel_error_sum = watchdog.velocity_error_sum
+
         # --- Steering Slew Rate Limiter ---
-        steer_diff = self.target_steering_input - self.current_steering_input
-        max_steer_change = (self.steering_slew_rate / self.max_steer_limit) * dt
-        
-        if abs(steer_diff) > max_steer_change:
-            self.current_steering_input += math.copysign(max_steer_change, steer_diff)
-        else:
-            self.current_steering_input = self.target_steering_input
+        self.current_steering_input = slew_steering(
+            self.current_steering_input, self.target_steering_input,
+            self.steering_slew_rate, self.max_steer_limit, dt,
+        )
 
         # --- Closed-Loop Velocity Control (PID) ---
         # Only run PID if we have a non-zero target and aren't in manual override
@@ -191,8 +199,15 @@ class DrivingModelNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    rclpy.spin(DrivingModelNode())
-    rclpy.shutdown()
+    node = DrivingModelNode()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
