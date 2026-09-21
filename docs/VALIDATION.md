@@ -1,7 +1,15 @@
 # Validation and Evidence
 
 ## Current result — 2026-08-11 America/Los_Angeles
-- Server `my_gazebo_package` rebuilt cleanly and its scoped suite passed 17 pytest cases with zero failures/skips; its launch runtime suite passed 2 tests. The launched ECU watchdog, actuator-limit, and clean-shutdown runtime contract passed.
+- Server `my_gazebo_package` rebuilt cleanly and its scoped suite passed 18 pytest cases with zero failures/skips; its launch runtime suite passed 2 tests. The launched ECU watchdog, actuator-limit, and clean-shutdown runtime contract passed.
+- The Gazebo OAK-D RGB-D sensor now renders RGB from 0.02-300 m while keeping
+  depth bounded to 0.7-30 m through SDFormat's nested depth-camera clip. The
+  xacro-to-SDF expansion preserves the existing topic, frame, dimensions, and
+  synchronized RGB-D sensor; the focused camera contract passes.
+- Foxglove annotation publication no longer aborts on the first valid-depth YOLO
+  detection: the landmark processor's periodic depth log now uses the defined
+  metric depth value. Thirteen focused launch/perception tests and Python syntax
+  checks pass; Orange Pi annotation confirmation remains pending.
 - RTAB-Map launch now assigns a per-launch database in `/tmp` and removes the
   closed database plus exact SQLite `-wal`/`-shm` sidecars on container exit by
   default. Seven focused launch-contract tests and Python syntax checks pass;

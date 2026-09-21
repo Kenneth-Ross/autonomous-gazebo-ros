@@ -92,6 +92,8 @@ def test_slam_uses_sensor_data_qos_for_raw_images():
     assert "annotations_msg.timestamp = depth_msg.header.stamp" in landmark
     assert 'text_annotation.text = f"{display_id}: {z_m:.1f}m"' in landmark
     assert "self.annotation_pub.publish(annotations_msg)" in landmark
+    assert 'raw_z' not in landmark
+    assert 'Depth check: z_m={z_m:.3f}m' in landmark
     assert "self.depth_frames = OrderedDict()" in landmark
     assert "declare_parameter('candidate_max_range_m', 20.0)" in landmark
     assert "self.promotion_metrics = Counter()" in landmark

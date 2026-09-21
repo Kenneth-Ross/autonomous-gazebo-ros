@@ -204,14 +204,14 @@ class ConeLandmarkProcessor(Node):
                 self.promotion_metrics['invalid_depth'] += 1
                 continue
             
-            # Temporary logging to verify depth units (if raw_z is e.g. < 15, it's already in meters!)
+            # Periodic metric-depth diagnostic.
             if hasattr(self, 'debug_count'):
                 self.debug_count += 1
             else:
                 self.debug_count = 0
                 
             if self.debug_count % 30 == 0:
-                self.get_logger().info(f"Depth check: raw_z={raw_z:.1f}, scaled z_m={z_m:.3f}m")
+                self.get_logger().info(f"Depth check: z_m={z_m:.3f}m")
             
             # Max range cutoff (increased for simulation, real OAK-D gets noisy past 6-8m)
             if z_m > self.max_range_m:
