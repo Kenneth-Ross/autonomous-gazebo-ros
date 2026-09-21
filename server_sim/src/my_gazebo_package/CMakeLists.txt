@@ -53,6 +53,9 @@ if(BUILD_TESTING)
   ament_add_pytest_test(driving_model_control_test
     test/test_driving_model_control.py
   )
+  ament_add_pytest_test(camera_range_contract_test
+    test/test_camera_range_contract.py
+  )
   ament_add_pytest_test(vehicle_kinematic_contract_test
     test/test_vehicle_kinematic_contract.py
   )

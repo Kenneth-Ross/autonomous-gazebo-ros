@@ -97,9 +97,15 @@
             <format>R8G8B8</format>
           </image>
           <clip>
-            <near>0.7</near>
-            <far>30.0</far>
+            <near>0.02</near>
+            <far>300.0</far>
           </clip>
+          <depth_camera>
+            <clip>
+              <near>0.7</near>
+              <far>30.0</far>
+            </clip>
+          </depth_camera>
           <noise>
             <type>gaussian</type>
             <mean>0.0</mean>

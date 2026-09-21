@@ -9,6 +9,10 @@ topic are not part of this contract.
 | RGB | `/oakd/rgb/image_raw/ffmpeg` | `bgr8` | 1280×800 | HEVC/NVENC, 20 Mbps initial target |
 | Depth | `/oakd/depth/image_raw/zstd` | `16UC1` millimetres | 1280×800 | lossless Zstd level 1 |
 
+The shared Gazebo RGB-D sensor uses independent clip planes: RGB renders from
+0.02 m to 300 m, while depth remains bounded from 0.7 m to 30 m. The nested
+SDFormat depth clip preserves the existing synchronized topics and intrinsics.
+
 Both messages in a pair carry the identical Gazebo timestamp and
 `camera_link_optical`. Float depth metres convert once on the server: non-finite,
 negative, and zero values become `0`; finite values round to the nearest millimetre;
