@@ -54,3 +54,22 @@ def cyclone_uri(interface, local_address, peer_address):
       <SocketReceiveBufferSize min="10MB"/><SocketSendBufferSize min="10MB"/></Internal>
       <Discovery><Peers><Peer address="{peer_address}"/></Peers></Discovery>
       </Domain></CycloneDDS>'''
+
+
+def database_cache_paths(database_path):
+    value = str(database_path)
+    if not value:
+        raise ValueError('RTAB-Map database path must not be empty')
+    path = os.path.abspath(os.path.expanduser(value))
+    if path == os.path.sep:
+        raise ValueError('RTAB-Map database path must name a file')
+    return tuple(path + suffix for suffix in ('', '-wal', '-shm'))
+
+
+def clear_database_cache(database_path):
+    removed = []
+    for path in database_cache_paths(database_path):
+        if os.path.isfile(path) or os.path.islink(path):
+            os.unlink(path)
+            removed.append(path)
+    return tuple(removed)

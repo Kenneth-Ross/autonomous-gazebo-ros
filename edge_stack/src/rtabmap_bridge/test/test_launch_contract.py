@@ -1,7 +1,8 @@
 import pytest
 from pathlib import Path
 from rtabmap_bridge.launch_contract import (
-    cyclone_uri, validate_flags, validate_network, validate_npu_model)
+    clear_database_cache, cyclone_uri, database_cache_paths, validate_flags,
+    validate_network, validate_npu_model)
 
 
 def test_invalid_flag_dependencies_are_rejected():
@@ -20,6 +21,32 @@ def test_dds_interface_address_and_peer_contract():
     assert '<MaxMessageSize>1472B</MaxMessageSize>' in xml
     assert '<FragmentSize>1344B</FragmentSize>' in xml
     assert '<MaxMessageSize>12MB</MaxMessageSize>' not in xml
+
+
+def test_rtabmap_cache_cleanup_is_file_scoped(tmp_path):
+    database = tmp_path / 'rtabmap.db'
+    sidecars = [tmp_path / 'rtabmap.db-wal', tmp_path / 'rtabmap.db-shm']
+    survivor = tmp_path / 'rtabmap.db-backup'
+    for path in [database, *sidecars, survivor]:
+        path.write_text('cache')
+
+    assert database_cache_paths(database) == tuple(
+        str(path) for path in [database, *sidecars])
+    assert clear_database_cache(database) == tuple(
+        str(path) for path in [database, *sidecars])
+    assert not database.exists()
+    assert all(not path.exists() for path in sidecars)
+    assert survivor.exists()
+    with pytest.raises(ValueError):
+        database_cache_paths('')
+
+
+def test_launch_clears_explicit_rtabmap_database_on_container_exit():
+    launch = (Path(__file__).parents[1] / 'launch' / 'rtabmap_slam.launch.py').read_text()
+    assert "'database_path': cfg['rtabmap_database_path']" in launch
+    assert "DeclareLaunchArgument('clear_rtabmap_cache_on_exit', default_value='true')" in launch
+    assert 'clear_database_cache' in launch
+    assert 'on_exit=[OpaqueFunction(function=cleanup_rtabmap_cache)]' in launch
 
 
 def test_launch_exposes_optional_rgb_decoder_options():

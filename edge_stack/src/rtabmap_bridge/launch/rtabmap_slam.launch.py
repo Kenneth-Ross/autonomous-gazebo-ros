@@ -1,11 +1,23 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetEnvironmentVariable
+from launch.actions import (
+    DeclareLaunchArgument, LogInfo, OpaqueFunction, SetEnvironmentVariable)
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 from rtabmap_bridge.launch_contract import (
-    cyclone_uri, parse_bool, validate_flags, validate_network, validate_npu_model)
+    clear_database_cache, cyclone_uri, parse_bool, validate_flags,
+    validate_network, validate_npu_model)
+
+
+def cleanup_rtabmap_cache(context):
+    if not parse_bool(context.launch_configurations['clear_rtabmap_cache_on_exit']):
+        return []
+    database_path = context.launch_configurations['rtabmap_database_path']
+    removed = clear_database_cache(database_path)
+    detail = ', '.join(removed) if removed else 'no cache files present'
+    return [LogInfo(msg=f'RTAB-Map cache cleanup: {detail}')]
+
 
 
 def launch_setup(context):
@@ -32,7 +44,8 @@ def launch_setup(context):
         common = {'use_sim_time': use_sim_time, 'frame_id': 'base_link',
                   'qos_image': 2, 'qos_camera_info': 1, 'approx_sync': True,
                   'approx_sync_max_interval': 0.05, 'sync_queue_size': 10,
-                  'wait_for_transform': 0.0}
+                  'wait_for_transform': 0.0,
+                  'database_path': cfg['rtabmap_database_path']}
         remaps = [('rgb/image', '/edge/slam/rgb/image_raw'),
                   ('depth/image', '/edge/slam/depth/image_raw'),
                   ('rgb/camera_info', '/edge/slam/rgb/camera_info'),
@@ -50,13 +63,16 @@ def launch_setup(context):
                            name='sensor_covariance_injector',
                            parameters=[{'use_sim_time': use_sim_time}],
                            extra_arguments=[{'use_intra_process_comms': True}])])
+    container = ComposableNodeContainer(
+        name='vision_container', namespace='', package='rclcpp_components',
+        executable='component_container_mt',
+        composable_node_descriptions=components, output='screen',
+        on_exit=[OpaqueFunction(function=cleanup_rtabmap_cache)])
     actions = [
         SetEnvironmentVariable('CYCLONEDDS_URI', cyclone_uri(interface, local, peer)),
         SetEnvironmentVariable('RMW_IMPLEMENTATION', 'rmw_cyclonedds_cpp'),
         Node(package='rtabmap_bridge', executable='multimedia_preflight', output='screen'),
-        ComposableNodeContainer(name='vision_container', namespace='',
-            package='rclcpp_components', executable='component_container_mt',
-            composable_node_descriptions=components, output='screen')]
+        container]
     if enabled['enable_foxglove']:
         actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
             parameters=[{'port': 8765, 'address': '0.0.0.0',
@@ -92,6 +108,9 @@ def generate_launch_description():
         DeclareLaunchArgument('landmark_candidate_max_range_m', default_value='20.0'),
         DeclareLaunchArgument('landmark_max_range_m', default_value='20.0'),
         DeclareLaunchArgument('rgb_decoder_av_options', default_value=''),
+        DeclareLaunchArgument('rtabmap_database_path',
+            default_value=f'/tmp/rtabmap_edge_{os.getpid()}.db'),
+        DeclareLaunchArgument('clear_rtabmap_cache_on_exit', default_value='true'),
         DeclareLaunchArgument('npu_model_path', default_value='')]
     arguments += [DeclareLaunchArgument(name, default_value='false') for name in (
         'enable_foxglove', 'enable_slam', 'enable_npu', 'enable_landmarks',

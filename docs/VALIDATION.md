@@ -2,6 +2,10 @@
 
 ## Current result — 2026-08-11 America/Los_Angeles
 - Server `my_gazebo_package` rebuilt cleanly and its scoped suite passed 17 pytest cases with zero failures/skips; its launch runtime suite passed 2 tests. The launched ECU watchdog, actuator-limit, and clean-shutdown runtime contract passed.
+- RTAB-Map launch now assigns a per-launch database in `/tmp` and removes the
+  closed database plus exact SQLite `-wal`/`-shm` sidecars on container exit by
+  default. Seven focused launch-contract tests and Python syntax checks pass;
+  Orange Pi shutdown confirmation remains pending.
 - Host `edge_nav2` rebuilt with Jazzy and passed 11 tests with one copyright check skipped. The real bridge runtime covered 20 Hz publication, `base_link`, low-speed turn direction, moving yaw-rate limiting, and the 0.6108 rad steering cap.
 - Nav2 planner runtime passed with Smac Hybrid: 90 poses over 9.545 m, 1.438 m minimum five-pose radius, 3.057 m lateral extent, and no in-place segment. Evidence: `nav2_u_turn_20260811T050152Z.log`.
 - Host closed-loop controller acceptance passed: U-turn goal/yaw errors 0.241 m/0.112 rad; S-turn error 0.234 m, straight speed 3.000 m/s versus 0.519 m/s in-turn, 13 pre-turn reduced-speed samples, no spin, and 0.6108 rad peak steering. Evidence: `nav2_controller_20260811T050126Z.log`.
