@@ -24,6 +24,17 @@ colcon test-result --verbose
 
 Run the smallest relevant launch/node smoke test and record observed topics and rates.
 
+## Test selection
+
+Favor [production-flow E2E acceptance](TESTING.md) for changes to racing,
+recording, and actuator behavior. Start with `scripts/validation/racing_host_e2e.sh`
+after package builds. Keep exact-boundary, malformed-data, precision, and file
+safety tests where runtime scheduling or hardware makes E2E coverage unreliable.
+Replace duplicated/prototype and source-string checks only after their required
+behavior passes at the appropriate runtime boundary. Run Gazebo and edge gates
+when those parts of the data path change; do not equate host fixtures with a
+verified vehicle lap.
+
 ## Streaming contract
 
 Before changing sender or receiver, record source topics/rates, codec, pixel format, dimensions, depth representation, destination ports, timestamps, frame IDs, receiver outputs, and one-sided rollout compatibility.

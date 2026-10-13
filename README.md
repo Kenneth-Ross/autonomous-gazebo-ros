@@ -4,9 +4,10 @@ Simulation-to-edge stack for an autonomous Ackermann vehicle. The host runs Gaze
 
 ## Status
 
-- **Implemented:** RGB/depth capture, horizontal RGB-D packing, HEVC through `ffmpeg_image_transport`, edge unpacking, and autonomous-racing components.
+- **Implemented:** RGB/depth capture, split HEVC RGB and lossless Zstd depth transport, exact-timestamp edge pairing, and autonomous-racing components.
 - **Verified:** See [Validation](docs/VALIDATION.md). Source presence is not a passing host or edge test.
-- **Current sender:** `sim_camera_encoder` is the sole active super-frame producer.
+- **Test first:** [Production-flow E2E and focused boundary checks](docs/TESTING.md).
+- **Current sender:** `sim_camera_encoder` produces both exact-stamped wire streams; the packed super-frame is historical.
 
 ## Build and launch
 
@@ -43,11 +44,15 @@ source install/local_setup.bash
 
 ## Current documentation
 
-- [Active Project Audit](docs/PROJECTS.md)
-- [Current Architecture](docs/ARCHITECTURE_CURRENT.md)
-- [Streaming Contract](docs/STREAMING_CONTRACT.md)
-- [Edge Deployment](docs/EDGE_DEPLOYMENT.md)
-- [Validation](docs/VALIDATION.md)
-- [Codex Workflows](docs/CODEX_WORKFLOWS.md)
+The [documentation home](docs/INDEX.md) brings architecture, visual guides,
+deployment, acceptance evidence, project plans, and the historical archive into
+one website. Markdown is the canonical source.
 
-Plans and retrospectives are historical context, not proof of behavior. No project-wide license is currently declared.
+```bash
+python3 scripts/docs/serve_site.py --bind 127.0.0.1 --port 8766
+```
+
+Open `http://127.0.0.1:8766`. See [maintenance and persistent hosting](docs/DOCUMENTATION.md)
+for dependencies, automated checks, and deployment.
+
+Active plans define acceptance scope; deprecated plans and retrospectives are historical context. Neither source presence nor plans prove runtime behavior. No project-wide license is currently declared.

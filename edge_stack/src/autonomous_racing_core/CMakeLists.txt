@@ -11,6 +11,9 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 add_library(autonomous_racing_core SHARED
@@ -30,12 +33,12 @@ ament_target_dependencies(cone_map_adapter_node
 add_executable(racing_planner_node src/racing_planner_node.cpp)
 target_link_libraries(racing_planner_node autonomous_racing_core)
 ament_target_dependencies(racing_planner_node
-  autonomous_racing_msgs rclcpp)
+  autonomous_racing_msgs geometry_msgs rclcpp tf2 tf2_geometry_msgs tf2_ros)
 
 add_executable(racing_controller_node src/racing_controller_node.cpp)
 target_link_libraries(racing_controller_node autonomous_racing_core)
 ament_target_dependencies(racing_controller_node
-  autonomous_racing_msgs geometry_msgs nav_msgs rclcpp)
+  autonomous_racing_msgs geometry_msgs nav_msgs rclcpp tf2 tf2_geometry_msgs tf2_ros)
 
 add_executable(racing_supervisor_node src/racing_supervisor_node.cpp)
 target_link_libraries(racing_supervisor_node autonomous_racing_core)
@@ -53,11 +56,14 @@ install(FILES package.xml DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
   ament_add_gtest(test_racing_core test/test_racing_core.cpp)
   target_link_libraries(test_racing_core autonomous_racing_core)
   target_include_directories(test_racing_core PRIVATE include)
   ament_target_dependencies(test_racing_core
     autonomous_racing_msgs geometry_msgs nav_msgs rclcpp std_msgs)
+  add_launch_test(test/test_racing_e2e_launch.py TIMEOUT 90 ENV ROS_DOMAIN_ID=178)
+  set_tests_properties(test_test_racing_e2e_launch.py PROPERTIES LABELS "e2e;launch_test")
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
@@ -65,5 +71,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_dependencies(autonomous_racing_msgs geometry_msgs nav_msgs rclcpp std_msgs visualization_msgs)
+ament_export_dependencies(autonomous_racing_msgs geometry_msgs nav_msgs rclcpp std_msgs tf2 tf2_geometry_msgs tf2_ros visualization_msgs)
 ament_package()

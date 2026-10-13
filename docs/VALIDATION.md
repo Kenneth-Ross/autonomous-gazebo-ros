@@ -183,3 +183,15 @@ drain-and-retry wrapper patch.
 - Deterministic RTAB-Map acceptance evaluation now enforces rate, conversion/delay, camera pairing, bounded queue/drop/malformed behavior, landmark transform health, and fatal/stall rejection. `rtabmap_slam_acceptance.sh` captures a 120-second nominal window or a controlled three-second `vision_container` pause plus 90-second recovery window, then checks map TF and map data. Three synthetic regression cases pass. Two fixed-route nominal Orange Pi passes and one adversarial Orange Pi pass remain required for `[COMPLETE]`.
 - First nominal and pause/recovery runs on commit `7fe7d3ae` showed healthy RTAB-Map timing but exposed an over-strict camera assertion: isolated 28.x Hz windows and small bounded drop bursts failed a rule requiring every window at least 29 Hz and zero drop growth; the deliberate pause also produced an expected 9.2 Hz recovery window. Acceptance now requires median pair rate at least 29 Hz, at most 25% low-rate windows, drop growth at most five, queue high-water at most 12, and three final adversarial recovery windows at least 29 Hz. Analyzer output includes these values; four acceptance regressions pass. Hardware rerun pending.
 - Commit `28c60526` completed bounded RTAB-Map operational acceptance. Nominal evidence `rtabmap_slam_nominal_20260723T013756Z.log` passed 87 windows at 0.725 Hz, 2.3 ms conversion p95, 344 ms delay p95, 30.2 FPS camera median, zero low-rate windows/drop growth, 37 landmarks, and live map TF/data. Reset-run evidence `rtabmap_slam_nominal_20260723T014636Z.log` passed 87 windows at 0.726 Hz, 2.3 ms conversion p95, 352 ms delay p95, 30.2 FPS median, two low windows, five drops, 36 landmarks, and live map TF/data. Adversarial evidence `rtabmap_slam_adversarial_20260723T014013Z.log` passed after a three-second `vision_container` pause with 66 recovery windows at 0.726 Hz, 2.2 ms conversion p95, 385 ms delay p95, 30.2 FPS median, zero drop growth, 41 landmarks, and live map TF/data. A later continuous-session window at working memory 418 exceeded delay acceptance, so long-map scalability remains a separate follow-up rather than part of the completed 120-second scope.
+
+## Host E2E consolidation — 2026-10-12
+
+The current suite prioritizes connected racing control, real MCAP lifecycle and
+payload playback, and production actuator acceptance. Twenty-eight redundant
+unit/source-contract cases were replaced or removed after runtime coverage
+passed. Core boundary coverage is four C++ cases; canonical message generation
+builds in both workspaces. All three E2E suites, seven remaining edge/core CTest
+entries, and five remaining server CTest entries pass. Earlier counts in this
+chronology describe earlier inventories. See the [testing guide](TESTING.md) and
+[retained host results](evidence/E2E_TEST_CONSOLIDATION_HOST.md). No new Gazebo or
+Orange Pi run is claimed.

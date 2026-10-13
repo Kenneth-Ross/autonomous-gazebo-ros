@@ -1,0 +1,2 @@
+# Keep the pinned upstream renderer byte-for-byte; ignore upstream whitespace.
+docs/site/assets/mermaid.min.js -whitespace

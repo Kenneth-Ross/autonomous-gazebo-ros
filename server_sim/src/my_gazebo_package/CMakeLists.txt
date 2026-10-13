@@ -66,7 +66,11 @@ if(BUILD_TESTING)
     test/test_run_artifacts.py
   )
   find_package(launch_testing_ament_cmake REQUIRED)
-  add_launch_test(test/test_driving_model_runtime.py TIMEOUT 30)
+  add_launch_test(test/test_driving_model_runtime.py TIMEOUT 30 ENV ROS_DOMAIN_ID=176)
+  add_launch_test(test/test_run_recorder_e2e_launch.py TIMEOUT 60 ENV ROS_DOMAIN_ID=177)
+  set_tests_properties(
+    test_test_driving_model_runtime.py test_test_run_recorder_e2e_launch.py
+    PROPERTIES LABELS "e2e;launch_test")
 endif()
 
 # Install ament index

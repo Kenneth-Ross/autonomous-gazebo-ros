@@ -30,8 +30,9 @@ private:
   {
     autonomous_racing_msgs::msg::ConeMap output;
     output.map_revision = ++revision_;
-    output.localization_confidence = 1.0F;
-    output.header.stamp = get_clock()->now();
+    // MarkerArray has no measured observation-quality fields. Keep that
+    // uncertainty visible instead of promoting marker presence to confidence.
+    output.localization_confidence = 0.0F;
     for (const auto & marker : message->markers) {
       if (marker.action == visualization_msgs::msg::Marker::DELETE ||
         marker.action == visualization_msgs::msg::Marker::DELETEALL ||
@@ -48,6 +49,7 @@ private:
       }
       if (output.header.frame_id.empty()) {
         output.header.frame_id = marker.header.frame_id;
+        output.header.stamp = marker.header.stamp;
       }
       if (marker.header.frame_id != output.header.frame_id) {
         continue;
@@ -55,17 +57,17 @@ private:
       autonomous_racing_msgs::msg::ConeEstimate cone;
       cone.id = static_cast<std::uint64_t>(marker.id);
       cone.pose.pose = marker.pose;
-      cone.pose.covariance[0] = 0.04;
-      cone.pose.covariance[7] = 0.04;
-      cone.pose.covariance[35] = 0.10;
-      cone.detector_score = 1.0F;
+      cone.pose.covariance[0] = 1.0e6;
+      cone.pose.covariance[7] = 1.0e6;
+      cone.pose.covariance[35] = 1.0e6;
+      cone.detector_score = 0.0F;
       cone.observation_count = 1U;
       cone.distinct_view_count = 1U;
       cone.last_observed = marker.header.stamp;
-      cone.depth_quality = 1.0F;
-      cone.pose_quality = 1.0F;
-      cone.association_confidence = 1.0F;
-      cone.state = autonomous_racing_msgs::msg::ConeEstimate::PERSISTENT;
+      cone.depth_quality = 0.0F;
+      cone.pose_quality = 0.0F;
+      cone.association_confidence = 0.0F;
+      cone.state = autonomous_racing_msgs::msg::ConeEstimate::QUARANTINED;
       output.cones.push_back(cone);
     }
     map_pub_->publish(output);

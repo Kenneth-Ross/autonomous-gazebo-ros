@@ -30,11 +30,5 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 ament_export_dependencies(rosidl_default_runtime)
 
-if(BUILD_TESTING)
-  find_package(ament_cmake_pytest REQUIRED)
-  ament_add_pytest_test(interface_contract_test
-    test/test_interface_contract.py
-  )
-endif()
 
 ament_package()

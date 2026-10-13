@@ -1,0 +1,13 @@
+[Unit]
+Description=Autonomous Gazebo documentation website
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/k-dev/dev/ros2_gazebo
+ExecStart=/usr/bin/python3 scripts/docs/serve_site.py --bind 127.0.0.1 --tailnet-bind 100.98.177.128 --port 8766
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

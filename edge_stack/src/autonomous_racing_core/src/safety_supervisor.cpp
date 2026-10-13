@@ -40,7 +40,8 @@ bool SafetySupervisor::start(double now)
     return false;
   }
   if (config_.require_recorder &&
-    (!recorder_seen_ || now - recorder_at_ > config_.recorder_timeout))
+    (!recorder_seen_ || now - recorder_at_ < 0.0 ||
+    now - recorder_at_ > config_.recorder_timeout))
   {
     stop_reason_ = "recorder_missing";
     return false;
@@ -61,11 +62,16 @@ void SafetySupervisor::abort(const std::string & reason)
 
 bool SafetySupervisor::accept_candidate(
   const CommandCandidate & candidate,
-  double now)
+  double now,
+  double source_stamp)
 {
   // Nodes publish safe invalid candidates while starting. Do not latch a run
   // before explicit start; invalid candidates become hard faults once racing.
   if (state_ != SupervisorState::RACING || latched_stop_) {
+    return false;
+  }
+  if (!is_fresh_message_stamp(source_stamp, now, config_.command_timeout)) {
+    abort("candidate_stale");
     return false;
   }
   if (!candidate.valid || !std::isfinite(candidate.speed) ||
@@ -77,21 +83,27 @@ bool SafetySupervisor::accept_candidate(
     return false;
   }
   candidate_ = candidate;
-  candidate_.received_at = now;
+  candidate_.received_at = source_stamp;
   candidate_seen_ = true;
   return true;
 }
 
-bool SafetySupervisor::update_recorder(double now, bool healthy)
+bool SafetySupervisor::update_recorder(
+  double now, const std::string & heartbeat_run_id, bool healthy, double source_stamp)
 {
-  if (!healthy) {
+  if (!healthy || run_id_.empty() || heartbeat_run_id.empty() ||
+    heartbeat_run_id != run_id_ ||
+    !is_fresh_message_stamp(source_stamp, now, config_.recorder_timeout))
+  {
+    recorder_seen_ = false;
     if (state_ == SupervisorState::RACING && config_.require_recorder) {
-      abort("recorder_unhealthy");
+      abort(heartbeat_run_id != run_id_ ? "recorder_run_id_mismatch" :
+        (!healthy ? "recorder_unhealthy" : "recorder_stale"));
     }
     return false;
   }
   recorder_seen_ = true;
-  recorder_at_ = now;
+  recorder_at_ = source_stamp;
   return true;
 }
 
@@ -112,8 +124,10 @@ SupervisorOutput SafetySupervisor::tick(double now)
     return output;
   }
   if (config_.require_recorder &&
-    ((!recorder_seen_ && now - armed_at_ > config_.recorder_timeout) ||
-    (recorder_seen_ && now - recorder_at_ > config_.recorder_timeout)))
+    ((!recorder_seen_ && (now - armed_at_ < 0.0 ||
+    now - armed_at_ > config_.recorder_timeout)) ||
+    (recorder_seen_ && (now - recorder_at_ < 0.0 ||
+    now - recorder_at_ > config_.recorder_timeout))))
   {
     abort(!recorder_seen_ ? "recorder_missing" : "recorder_stale");
     output.state = state_;
@@ -130,7 +144,9 @@ SupervisorOutput SafetySupervisor::tick(double now)
     output.reason = stop_reason_;
     return output;
   }
-  if (now - candidate_.received_at > config_.command_timeout) {
+  if (now - candidate_.received_at < 0.0 ||
+    now - candidate_.received_at > config_.command_timeout)
+  {
     abort("candidate_stale");
     output.state = state_;
     output.reason = stop_reason_;

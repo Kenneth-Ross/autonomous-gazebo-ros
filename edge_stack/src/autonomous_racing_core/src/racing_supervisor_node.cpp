@@ -11,6 +11,7 @@
 #include "autonomous_racing_msgs/srv/abort_run.hpp"
 #include "autonomous_racing_msgs/srv/prepare_run.hpp"
 #include "autonomous_racing_msgs/srv/start_run.hpp"
+#include "autonomous_racing_core/types.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -25,34 +26,39 @@ public:
     SafetySupervisor::Config config;
     config.command_timeout = declare_parameter("command_timeout", 0.2);
     config.recorder_timeout = declare_parameter("recorder_timeout", 0.5);
+    command_timeout_ = config.command_timeout;
     config.max_speed = declare_parameter("max_speed", 5.0);
     config.max_steering = declare_parameter("max_steering", 0.6108);
     config.require_recorder = declare_parameter("require_recorder_heartbeat", true);
     supervisor_ = std::make_unique<SafetySupervisor>(config);
     run_id_ = declare_parameter("run_id", "");
+    control_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::SubscriptionOptions callback_options;
+    callback_options.callback_group = control_group_;
     candidate_sub_ = create_subscription<autonomous_racing_msgs::msg::ControlCandidate>(
       "/racing/control_candidate", rclcpp::QoS(10),
-      std::bind(&RacingSupervisorNode::candidate_callback, this, std::placeholders::_1));
+      std::bind(&RacingSupervisorNode::candidate_callback, this, std::placeholders::_1),
+      callback_options);
     recorder_sub_ = create_subscription<autonomous_racing_msgs::msg::RecorderHeartbeat>(
       "/racing/recorder/heartbeat", rclcpp::QoS(10),
-      std::bind(&RacingSupervisorNode::recorder_callback, this, std::placeholders::_1));
+      std::bind(&RacingSupervisorNode::recorder_callback, this, std::placeholders::_1),
+      callback_options);
     command_pub_ = create_publisher<geometry_msgs::msg::TwistStamped>(
       "/car/control_request", rclcpp::QoS(10));
     status_pub_ = create_publisher<autonomous_racing_msgs::msg::SupervisorStatus>(
       "/racing/supervisor_status", rclcpp::QoS(10));
-    service_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     prepare_srv_ = create_service<autonomous_racing_msgs::srv::PrepareRun>(
       "/racing/prepare", std::bind(&RacingSupervisorNode::prepare_callback, this,
-      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), service_group_);
+      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), control_group_);
     start_srv_ = create_service<autonomous_racing_msgs::srv::StartRun>(
       "/racing/start", std::bind(&RacingSupervisorNode::start_callback, this,
-      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), service_group_);
+      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), control_group_);
     abort_srv_ = create_service<autonomous_racing_msgs::srv::AbortRun>(
       "/racing/abort", std::bind(&RacingSupervisorNode::abort_callback, this,
-      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), service_group_);
+      std::placeholders::_1, std::placeholders::_2), rclcpp::ServicesQoS(), control_group_);
     timer_ = create_wall_timer(
       std::chrono::milliseconds(20),
-      std::bind(&RacingSupervisorNode::publish_outputs, this));
+      std::bind(&RacingSupervisorNode::publish_outputs, this), control_group_);
     RCLCPP_INFO(get_logger(), "racing supervisor ready");
   }
 
@@ -62,6 +68,13 @@ private:
   void candidate_callback(
     const autonomous_racing_msgs::msg::ControlCandidate::SharedPtr message)
   {
+    const auto stamp = rclcpp::Time(message->header.stamp).seconds();
+    if (!is_fresh_message_stamp(stamp, now(), command_timeout_)) {
+      if (supervisor_->state() == SupervisorState::RACING) {
+        supervisor_->abort("candidate_stale");
+      }
+      return;
+    }
     CommandCandidate candidate;
     candidate.speed = message->speed;
     candidate.steering = message->steering;
@@ -69,7 +82,7 @@ private:
     candidate.path_revision = message->path_revision;
     candidate.valid = message->valid;
     candidate.fault_reason = message->fault_reason;
-    supervisor_->accept_candidate(candidate, now());
+    supervisor_->accept_candidate(candidate, now(), stamp);
   }
 
   void recorder_callback(
@@ -78,7 +91,8 @@ private:
     const bool healthy = message->bag_healthy &&
       (message->state == autonomous_racing_msgs::msg::RecorderHeartbeat::READY ||
       message->state == autonomous_racing_msgs::msg::RecorderHeartbeat::RECORDING);
-    supervisor_->update_recorder(now(), healthy);
+    const auto stamp = rclcpp::Time(message->header.stamp).seconds();
+    supervisor_->update_recorder(now(), message->run_id, healthy, stamp);
   }
 
   void prepare_callback(
@@ -154,6 +168,7 @@ private:
 
   std::unique_ptr<SafetySupervisor> supervisor_;
   std::string run_id_;
+  double command_timeout_{0.2};
   rclcpp::Subscription<autonomous_racing_msgs::msg::ControlCandidate>::SharedPtr candidate_sub_;
   rclcpp::Subscription<autonomous_racing_msgs::msg::RecorderHeartbeat>::SharedPtr recorder_sub_;
   rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr command_pub_;
@@ -161,7 +176,7 @@ private:
   rclcpp::Service<autonomous_racing_msgs::srv::PrepareRun>::SharedPtr prepare_srv_;
   rclcpp::Service<autonomous_racing_msgs::srv::StartRun>::SharedPtr start_srv_;
   rclcpp::Service<autonomous_racing_msgs::srv::AbortRun>::SharedPtr abort_srv_;
-  rclcpp::CallbackGroup::SharedPtr service_group_;
+  rclcpp::CallbackGroup::SharedPtr control_group_;
   rclcpp::TimerBase::SharedPtr timer_;
   std::size_t publish_count_{0};
 };

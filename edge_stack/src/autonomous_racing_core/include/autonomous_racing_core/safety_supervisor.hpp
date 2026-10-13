@@ -46,8 +46,9 @@ public:
   void prepare(const std::string & run_id);
   bool start(double now);
   void abort(const std::string & reason);
-  bool accept_candidate(const CommandCandidate & candidate, double now);
-  bool update_recorder(double now, bool healthy);
+  bool accept_candidate(const CommandCandidate & candidate, double now, double source_stamp);
+  bool update_recorder(
+    double now, const std::string & heartbeat_run_id, bool healthy, double source_stamp);
   SupervisorOutput tick(double now);
 
   SupervisorState state() const {return state_;}
@@ -57,7 +58,7 @@ public:
   bool recorder_ready(double now) const
   {
     return !config_.require_recorder ||
-           (!latched_stop_ && recorder_seen_ &&
+           (!latched_stop_ && recorder_seen_ && now - recorder_at_ >= 0.0 &&
            now - recorder_at_ <= config_.recorder_timeout);
   }
 

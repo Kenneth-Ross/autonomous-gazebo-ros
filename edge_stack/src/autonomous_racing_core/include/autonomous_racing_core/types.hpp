@@ -1,11 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <cmath>
 #include <string>
 #include <vector>
 
 namespace autonomous_racing_core
 {
+
+inline bool is_fresh_message_stamp(double stamp, double now, double timeout)
+{
+  return std::isfinite(stamp) && std::isfinite(now) && std::isfinite(timeout) &&
+         stamp > 0.0 && timeout > 0.0 && stamp <= now && now - stamp <= timeout;
+}
 
 struct ConePoint
 {

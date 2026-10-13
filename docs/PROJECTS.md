@@ -5,8 +5,9 @@ is not acceptance evidence.
 
 | Status | Project | Specification | Current progress | Next gate |
 |---|---|---|---|---|
+| `[VERIFICATION]` | Persistent documentation website | [Specification](../plans/DOCUMENTATION_SITE.md) | 39-page static site with search, source links, historical archive, cited SVG/Mermaid guides, and enabled auto-rebuilding user service; user-approved publication at `http://100.98.177.128:8766/` binds only localhost and this host's tailnet IP; six nominal/adversarial tests, 12 diagram grammars, staged invalid-update resilience, deterministic builds, and host-originated tailnet HTTP 200 retained in [host evidence](site/VERIFICATION.md) | Browser rendering remains unchecked because preview tooling is unavailable; cross-device reachability remains untested; starts at login, not before login |
 | `[W.I.P]` | 30 FPS simulation-to-edge RGB-D streaming | [Streaming contract](STREAMING_CONTRACT.md) | Split HEVC RGB/Zstd depth implementation, depth-8 exact-stamp receiver, newest-frame transport QoS, direct HEVC/Zstd wire publishers, header-preserving Zstd decode, callback rate and in-process latency diagnostics, MTU-safe DDS generation, strict nominal, soak, edge adversarial, bit-exact depth, sender-restart, and missing-stream probes, DDS validation, and preflight | Orange Pi RKNN model loads; full-stack QoS passed; bounded SLAM feed passes; landmark 30 FPS raw-depth serialization isolated and replaced by bounded perception depth plus full-stack camera, annotations, NPU, landmarks, odometry, and RTAB-Map passed after warm-up; odometry ownership and `/rtabmap` namespace correction passed on edge; unused RGB-D odometry compute removed; 20 m cone candidate range and promotion diagnostics passed with 44 persistent landmarks and bounded candidates; C++ covariance injector passed edge verification; capture the post-change RTAB-Map performance baseline; retain pressure and decoder-comparison evidence; sender restart and missing-stream tests are optional; soak, edge faults, depth, and Ethernet rediscovery passed; corrected sender restart passed; missing-stream tests pending |
-| `[W.I.P]` | Autonomous racing | [Specification](autonomous_racing_plan.md) | Canonical `autonomous_racing_msgs` package is shared by edge/server; typed recorder heartbeat and prepare/start/abort services replace prototype JSONL controls; production C++ cone-map adapter, confidence-aware midpoint planner, pure-pursuit controller, and latched safety supervisor are in launch; host build plus 9 C++ core tests, interface tests, Python contract/launch tests, and lint pass; full Gazebo lifecycle smoke retained valid MCAP artifact; server MCAP coordinator writes atomic manifests/summaries and explicit allowlists; SVG-derived Catalunya vector track is default | Execute Orange Pi Gate A fixed/unseen safe-lap runs and retain production MCAP/Foxglove evidence |
+| `[W.I.P]` | Autonomous racing | [Specification](autonomous_racing_plan.md); [review fix plan](../plans/RACING_REVIEW_FIXES.md) | Canonical `autonomous_racing_msgs` package is shared by edge/server; typed recorder heartbeat and prepare/start/abort services replace prototype JSONL controls; production C++ planner, controller, and supervisor now enforce timestamped TF transforms, recorder run identity, serialized state transitions, and conservative unknown marker quality; host coverage now favors connected-control, real MCAP lifecycle/playback, and actuator E2E acceptance with four focused C++ boundary regressions; existing Gazebo lifecycle smoke retains valid MCAP artifact; server MCAP coordinator writes atomic manifests/summaries and explicit allowlists; SVG-derived Catalunya vector track is default; retained evidence in [RACING_REVIEW_FIXES_HOST.md](evidence/RACING_REVIEW_FIXES_HOST.md) | Orange Pi Gate A fixed/unseen safe-lap runs and production MCAP/Foxglove evidence; replace the marker adapter with a trusted quality-bearing cone source before movement can be authorized |
 | `[W.I.P]` | Autonomous navigation acceptance | [Plan](AUTONOMOUS_TESTING_PLAN.md) | ECU/Gazebo acceptance, Jazzy behavior migration, no-spin BT, 1.35 m inflation, 11-pass edge_nav2 suite, Smac Hybrid planner pass, host closed-loop U-turn/S-turn controller pass, real Gazebo U-turn/S-turn pass, host wall-clearance costmap pass, and SVG-derived Catalunya vector map selected as server/acceptance default | Add Orange Pi deployment validation, then promote to `[VERIFICATION]` |
 | `[W.I.P]` | Foxglove visualization | [Specification](FOXGLOVE_INTEGRATION.md) | Isolated by edge launch flag; preview compression is a bounded worker; host launch regression covers `/odometry/filtered` and `/racing/.*`; Desktop MCP review contract defined for local-MCAP schema, timeline, and screenshot triage | Retain one nominal and one adversarial read-only MCP review, then complete Orange Pi fault evidence; MCP remains non-gating |
 | `[COMPLETE]` | Edge RTAB-Map | [Acceptance specification](../plans/RTABMAP_SLAM_ACCEPTANCE.md) | Decoder, odometry, EKF, SLAM composition, deterministic evaluator, two nominal plus one adversarial Orange Pi passes, and tested file-scoped database cleanup after container exit | None for bounded 120-second operational mapping scope; long-map scalability tracked separately |
@@ -17,6 +18,42 @@ is not acceptance evidence.
 Projects enter `[VERIFICATION]` only after deterministic automated acceptance is
 complete and nominal/adversarial execution can be performed. `[COMPLETE]` requires
 all mandatory cases to pass with retained evidence.
+
+## Overall status — 2026-10-12
+
+**End-to-end autonomous driving remains `[W.I.P]`.** Local `main` now includes the
+65 committed workspace/streaming changes at `e18157b2`; uncommitted documentation
+work was preserved during the review. The user subsequently authorized committing
+and pushing the completed source, documentation, and test consolidation. The focused
+[code review](CODE_REVIEW_2026-10-12.md) found supervisor concurrency, vehicle/map
+planning, map/odom control-frame, recorder identity, and perception-confidence
+issues. The focused remediation is specified in
+[RACING_REVIEW_FIXES.md](../plans/RACING_REVIEW_FIXES.md). The fixes now pass
+nominal/adversarial host node acceptance; Gate A remains blocked on trustworthy
+cone-source integration, Orange Pi deployment, and safe-lap evidence.
+
+The initial review passed 58 selected Python regressions. Remediation now has a
+fresh package build, 14 C++ regressions, two ROS-node acceptance cases, and eight
+passing package CTest checks. Both new node regressions fail against original
+binaries and pass after the fix. No Orange Pi execution is claimed. Existing
+completed deliverables retain only their recorded bounded acceptance scope.
+
+The documentation user service remains available at
+[the tailnet site](http://100.98.177.128:8766/). Requested Tailscale Serve proxy
+configuration is blocked by host privileges; HTTPS Serve also reported disabled.
+An existing unrelated Serve site on port 80 is preserved. See the review for the
+operator command and remaining deployment gates.
+
+## Test consolidation
+
+[E2E test consolidation](../plans/E2E_TEST_CONSOLIDATION.md) is `[COMPLETE]` for
+its host scope: 28 duplicated/prototype unit or source-contract cases removed
+after replacement acceptance passed. Connected control, real MCAP recording and
+payload playback, and actuator behavior are now the recommended first check via
+`racing_host_e2e.sh`. Four focused racing C++ cases and exact-boundary/transport
+integrity regressions remain. Three E2E suites and all retained package checks
+passed; [coverage migration and retained results](evidence/E2E_TEST_CONSOLIDATION_HOST.md)
+record their boundaries. Host fixtures do not establish Orange Pi safe laps.
 
 ## End-to-end deliverable progress
 

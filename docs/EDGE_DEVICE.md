@@ -42,13 +42,18 @@ Inventory the installed FFmpeg/GStreamer/Rockchip components using the package a
 
 The active contract is defined in [STREAMING_CONTRACT.md](STREAMING_CONTRACT.md):
 
-- horizontal `RGB | depth MSB | depth LSB` packing;
-- 1280×800 planes and a 3840×800 packed image;
-- HEVC through `ffmpeg_image_transport` over ROS 2/DDS;
-- reconstructed `bgr8` RGB and `16UC1` millimetre depth.
+- two exact-timestamp 1280×800 streams over ROS 2/DDS;
+- HEVC RGB on `/oakd/rgb/image_raw/ffmpeg`;
+- lossless libzstd depth on `/oakd/depth/image_raw/zstd`;
+- reconstructed `bgr8` RGB and `16UC1` millimetre depth in `camera_link_optical`.
 
 The host currently requests `hevc_nvenc` at 20 Mbit/s. Edge decoding acceleration depends on the FFmpeg/image-transport build installed on the Orange Pi and must be verified from runtime logs and utilization.
 
 ## Storage and persistence
 
-RTAB-Map is currently configured with an in-memory SQLite database. This reduces storage writes but does not preserve the map across process/device restarts. Add and test an explicit export/persistence procedure before relying on generated maps operationally.
+RTAB-Map uses an explicit per-launch SQLite database under `/tmp` by default.
+After the component container exits, launch removes that exact file and its
+`-wal`/`-shm` sidecars. Set `rtabmap_database_path` and
+`clear_rtabmap_cache_on_exit:=false` to retain a database for debugging. An
+operational export/reload procedure still needs acceptance before relying on maps
+across restarts. See the [streaming contract](STREAMING_CONTRACT.md).

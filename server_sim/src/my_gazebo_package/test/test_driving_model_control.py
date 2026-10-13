@@ -1,11 +1,8 @@
-import math
-
 import pytest
 
 from my_gazebo_package_py.driving_model_control import (
     apply_watchdog,
     is_manual_override_active,
-    slew_steering,
 )
 
 
@@ -28,22 +25,6 @@ def test_watchdog_does_not_trigger_before_timeout():
     )
     assert not state.triggered
     assert state.target_velocity == 10.0
-
-
-def test_steering_slew_rate_is_limited_in_physical_radians():
-    max_angle = 0.6108
-    normalized = slew_steering(-1.0, 1.0, 2.0, max_angle, 0.05)
-    assert (normalized + 1.0) * max_angle == pytest.approx(0.1)
-
-
-def test_full_lock_reversal_takes_the_expected_physical_time():
-    max_angle = 0.6108
-    current = -1.0
-    elapsed = 0.0
-    while not math.isclose(current, 1.0):
-        current = slew_steering(current, 1.0, 2.0, max_angle, 0.01)
-        elapsed += 0.01
-    assert elapsed == pytest.approx((2.0 * max_angle) / 2.0, abs=0.01)
 
 
 @pytest.mark.parametrize(

@@ -41,3 +41,6 @@ foxglove_worktree/
 
 # Generated validation evidence
 validation_evidence/
+
+# Generated documentation website
+docs/site/dist/

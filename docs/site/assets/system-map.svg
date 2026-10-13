@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" role="img" aria-labelledby="title desc">
+  <title id="title">Simulation-to-edge system map</title>
+  <desc id="desc">The simulation server sends HEVC RGB and lossless Zstd depth over ROS 2 DDS to the Orange Pi decoder. Decoded data feeds perception, localization and planning. An independent safety supervisor gates commands back to the server vehicle. A server recorder supplies the supervisor heartbeat.</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#57d5db"/></marker></defs>
+  <rect width="900" height="420" rx="12" fill="#101d32"/>
+  <g font-family="system-ui,sans-serif" fill="#edf6ff">
+    <text x="30" y="39" font-size="17" font-weight="700">SIMULATION SERVER</text><text x="530" y="39" font-size="17" font-weight="700">ORANGE PI</text>
+    <path d="M450 55V390" stroke="#6c8199" stroke-dasharray="5 7"/>
+    <g fill="#1c334d" stroke="#567087"><rect x="30" y="70" width="185" height="95" rx="6"/><rect x="250" y="70" width="170" height="95" rx="6"/><rect x="530" y="70" width="330" height="95" rx="6"/><rect x="530" y="205" width="330" height="80" rx="6"/><rect x="530" y="325" width="330" height="60" rx="6"/><rect x="30" y="205" width="390" height="80" rx="6"/><rect x="30" y="325" width="390" height="60" rx="6"/></g>
+    <g font-size="18"><text x="48" y="109">Gazebo sensors</text><text x="268" y="109">Encode + stamp</text><text x="549" y="109">Decode + exact RGB-D pairing</text><text x="549" y="239">Perception · localization · planning</text><text x="549" y="362">Independent safety supervisor</text><text x="48" y="239">MCAP recorder + run artifacts</text><text x="48" y="362">Vehicle ECU + watchdog</text></g>
+    <g font-size="15" fill="#bdcfe1"><text x="48" y="141">RGB + float depth</text><text x="268" y="141">HEVC / Zstd</text><text x="549" y="141">Same timestamp · bounded queues</text><text x="48" y="269">Evidence retained on the server</text><text x="549" y="269">Camera / SLAM / preview feeds</text></g>
+    <g fill="none" stroke="#57d5db" stroke-width="2.5" marker-end="url(#arrow)"><path d="M215 117H248"/><path d="M420 117H528"/><path d="M695 165V203"/><path d="M695 285V323"/><path d="M530 355H422"/><path d="M420 245H478V343H528"/></g>
+    <text x="433" y="89" font-size="14" fill="#57d5db">DDS</text><text x="327" y="310" font-size="14" fill="#ffbf69">recorder heartbeat</text><text x="263" y="391" font-size="14" fill="#57d5db">gated control request</text>
+  </g>
+</svg>
