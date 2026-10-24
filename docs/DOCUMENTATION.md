@@ -72,11 +72,27 @@ paths are real files, so no SPA rewrites or server-side runtime are required.
 Relative links work under a subdirectory such as `/docs/`. The Sites manifest
 declares `dist` as the public output directory.
 
-Optional Sites publication requires registering a private site and committing/pushing a
-separate site source checkout. Those actions require explicit authorization under
-this repository's instructions; they must not commit unrelated repository files.
-Rebuild and republish after source changes. A hosted snapshot does not update
-itself from an unpushed local checkout.
+### GitHub Pages
+
+The [Pages workflow](https://github.com/Kenneth-Ross/autonomous-gazebo-ros/blob/main/.github/workflows/docs-pages.yml)
+runs the documentation unit tests and Mermaid check, builds the static bundle,
+then deploys it through GitHub Actions. Push to `main` to publish; a manual run
+only deploys when selected branch is `main`. Build source is the committed
+GitHub snapshot. Local or untracked changes do not appear until committed and
+pushed.
+
+This repository already uses GitHub Actions as its Pages source. To configure
+another repository, open **Settings → Pages → Build and deployment** and set
+**Source** to **GitHub Actions**. The public project site is
+`https://kenneth-ross.github.io/autonomous-gazebo-ros/`.
+
+The generator publishes `README.md`, `architecture.md`, every top-level Markdown
+file in `docs/`, `plans/`, and `deprecated/`, plus linked source copies and a
+search index containing document text. Review that full corpus as public content.
+Generated output excludes telemetry, model files, and unrelated untracked images.
+
+Optional Sites publication remains unselected. A hosted snapshot updates only
+after a successful Pages workflow run on committed source.
 
 ## Diagrams and cited examples
 

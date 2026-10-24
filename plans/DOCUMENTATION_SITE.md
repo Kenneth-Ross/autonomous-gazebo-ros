@@ -22,6 +22,9 @@ the user's explicit authorization.
 - Repeated builds are deterministic. Nominal and adversarial automated checks
   cover coverage, escaping, missing links, traversal, and build reproducibility.
 - Provide a repeatable build/serve procedure and a deployment-ready static bundle.
+- GitHub Actions runs documentation checks from committed `main` and publishes
+  only the generated static bundle to GitHub Pages. Public home, nested pages,
+  search index, and assets resolve under the repository project path.
 
 ## Verification evidence
 
@@ -36,7 +39,8 @@ invalid source update. User-approved tailnet publication is now served directly
 on `http://100.98.177.128:8766/`, with localhost retained and no Git publication.
 Six automated tests include nominal and adversarial listener-address checks.
 Browser rendering remains unchecked; no cross-device Orange Pi execution is
-claimed. Optional Sites/cloud publication is not the selected deployment.
+claimed. GitHub Pages is selected as the public static host; optional Sites
+publication remains unselected.
 
 ## Review and hosting update — 2026-10-12
 
@@ -58,3 +62,16 @@ project ledger. Hosting and remaining browser/device gates are unchanged.
 Current inventory is 39 pages after adding the testing guide and consolidation
 specification. The documentation acceptance suite and link/fragment validation
 pass. Hosting and remaining browser/device gates are unchanged.
+
+## GitHub Pages publication — 2026-10-24
+
+The Pages workflow builds the site from a committed GitHub snapshot, runs the
+documentation acceptance suite and Mermaid grammar check, then deploys only the
+generated bundle. Deployment is restricted to `main`; manual runs from other
+branches stop before deploy. The existing tailnet host remains available.
+
+Repository Pages source is already set to GitHub Actions. Public acceptance gate:
+retain a successful deployment. Check HTTPS responses for the home page, one
+nested guide, search index, and vendored diagram asset at the project URL. Verify
+relative navigation works under `/autonomous-gazebo-ros/`. This workflow does not
+publish uncommitted changes or ROS, telemetry, or model artifacts.

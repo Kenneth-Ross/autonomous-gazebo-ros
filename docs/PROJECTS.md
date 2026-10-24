@@ -69,3 +69,11 @@ record their boundaries. Host fixtures do not establish Orange Pi safe laps.
 | `[W.I.P]` | Foxglove camera overlays, landmarks, SLAM, and diagnostics | Bundled image annotations with all boxes and `ID: DISTm` labels worked in the client; topic/schema collision corrected | Complete automated whitelist/launch coverage and retain fault/performance evidence |
 | `[VERIFICATION]` | Camera transport resilience and integrity suite | Soak, receiver restart, slow consumer, malformed depth, bit-exact depth, sender restart, and Ethernet rediscovery passed with retained evidence | Optional missing-stream test is outside mandatory completion scope |
 | `[W.I.P]` | Reproducible builds, deployment guide, validation records, and final project status | Interfaces, launch parameters, deployment, troubleshooting, host server/edge builds, autonomous acceptance, and retained camera evidence documented | Orange Pi build and final full-stack performance probe; then promote applicable projects to `[COMPLETE]` |
+
+## Documentation website hosting — 2026-10-24
+
+GitHub Pages is configured for workflow publication. The new workflow runs
+documentation acceptance tests and Mermaid checks, then deploys only generated
+static output from committed `main`. Existing tailnet service stays available.
+Remaining gate: first successful deployment and public HTTP checks for home,
+nested guide, search index, and assets. Browser rendering remains open.
