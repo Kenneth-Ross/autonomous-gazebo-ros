@@ -82,3 +82,16 @@ The testing guide and consolidation plan bring the current site to 39 pages.
 Six documentation tests pass, generated links/fragments resolve, and the host
 tailnet testing and project-status pages return updated content. Browser and
 cross-device rendering/reachability remain unclaimed.
+
+## GitHub Pages publication — 2026-10-24
+
+Commit `c37e4375` deployed successfully through
+[GitHub Actions run 40138371146](https://github.com/Kenneth-Ross/autonomous-gazebo-ros/actions/runs/40138371146).
+The build passed seven documentation tests, parsed all 12 Mermaid blocks, and
+built 39 pages with local links and fragments valid. The workflow uploads only
+the generated site bundle and preserves `.nojekyll`.
+
+Public HTTPS HEAD checks returned 200 for the project home page, nested visual
+guide, `search-index.json`, and vendored Mermaid JavaScript. Relative project
+paths work under `/autonomous-gazebo-ros/`. Browser rendering, viewport/accessibility
+interaction, and cross-device visual checks remain unverified.

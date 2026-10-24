@@ -70,8 +70,14 @@ documentation acceptance suite and Mermaid grammar check, then deploys only the
 generated bundle. Deployment is restricted to `main`; manual runs from other
 branches stop before deploy. The existing tailnet host remains available.
 
-Repository Pages source is already set to GitHub Actions. Public acceptance gate:
-retain a successful deployment. Check HTTPS responses for the home page, one
-nested guide, search index, and vendored diagram asset at the project URL. Verify
-relative navigation works under `/autonomous-gazebo-ros/`. This workflow does not
-publish uncommitted changes or ROS, telemetry, or model artifacts.
+Repository Pages source is set to GitHub Actions. Commit `c37e4375` deployed in
+[workflow run 40138371146](https://github.com/Kenneth-Ross/autonomous-gazebo-ros/actions/runs/40138371146):
+seven documentation tests passed, all 12 Mermaid diagrams parsed, and 39 pages
+built with local links/fragments valid. HTTPS HEAD checks returned 200 for the
+home page, nested visual guide, search index, and vendored Mermaid asset. The
+project-path URLs resolve under `/autonomous-gazebo-ros/`.
+
+The public Pages gate passes. Browser rendering and cross-device visual checks
+remain open; overall site status stays `[VERIFICATION]`. Workflow publishes only
+committed source and generated site output, not uncommitted changes or ROS,
+telemetry, and model artifacts.

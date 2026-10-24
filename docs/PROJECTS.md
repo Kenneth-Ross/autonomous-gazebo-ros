@@ -72,8 +72,8 @@ record their boundaries. Host fixtures do not establish Orange Pi safe laps.
 
 ## Documentation website hosting — 2026-10-24
 
-GitHub Pages is configured for workflow publication. The new workflow runs
-documentation acceptance tests and Mermaid checks, then deploys only generated
-static output from committed `main`. Existing tailnet service stays available.
-Remaining gate: first successful deployment and public HTTP checks for home,
-nested guide, search index, and assets. Browser rendering remains open.
+GitHub Pages is live at
+`https://kenneth-ross.github.io/autonomous-gazebo-ros/`. [Run 40138371146](https://github.com/Kenneth-Ross/autonomous-gazebo-ros/actions/runs/40138371146)
+passed seven documentation tests, 12 Mermaid parses, and a 39-page build. Public
+HTTP checks for home, nested guide, search index, and asset returned 200. Tailnet
+service remains available; browser rendering and cross-device checks remain open.
